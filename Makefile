@@ -1,5 +1,6 @@
 BIN_DIR=./bin
 BIN_NAME=move2kube.wasm
+WEB_UI_DIR=m2k-web-ui
 
 .PHONY: build
 build:
@@ -16,3 +17,11 @@ clean:
 .PHONY: run
 run:
 	wasmer "${BIN_DIR}/${BIN_NAME}"
+
+.PHONY: build-web
+build-web:
+	cd "${WEB_UI_DIR}" && pnpm run build
+
+.PHONY: serve-web
+serve-web:
+	cd "${WEB_UI_DIR}" && pnpm run serve
