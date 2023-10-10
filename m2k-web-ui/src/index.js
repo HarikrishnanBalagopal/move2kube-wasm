@@ -11,6 +11,12 @@ const poll_oneoff = (in_, out, nsubscriptions, nevents) => {
     return 0;
 };
 
+// https://wasix.org/docs/api-reference/wasi/sock_accept
+const sock_accept = (sock, fd_flags, ro_fd, ro_addr) => {
+    console.log('sock_accept sock, fd_flags, ro_fd, ro_addr', sock, fd_flags, ro_fd, ro_addr);
+    return 0;
+};
+
 const main = async () => {
     console.log('main start');
 
@@ -80,6 +86,7 @@ const main = async () => {
         "wasi_snapshot_preview1": wasi.wasiImport,
     };
     importObject.wasi_snapshot_preview1['poll_oneoff'] = poll_oneoff;
+    importObject.wasi_snapshot_preview1['sock_accept'] = sock_accept;
     console.log('importObject.wasi_snapshot_preview1', importObject.wasi_snapshot_preview1);
     const all_wasi_host_func_names = Object.keys(importObject.wasi_snapshot_preview1);
     console.log('all_wasi_host_func_names', all_wasi_host_func_names);
