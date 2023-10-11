@@ -2,6 +2,10 @@ BIN_DIR=./bin
 BIN_NAME=move2kube.wasm
 WEB_UI_DIR=m2k-web-ui
 
+.PHONY: all
+all:
+	make build && make build-web && make serve-web
+
 .PHONY: build
 build:
 	mkdir -p "${BIN_DIR}"
