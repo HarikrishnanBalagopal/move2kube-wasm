@@ -112,10 +112,10 @@ const start_wasm = async (rootE, filename, fileContentsArr) => {
     try {
         wasi.start(wasmModule.instance);
     } catch (e) {
-        console.log(e);
-        console.log(e.exit_code);
-        console.log(Object.items(e));
-        console.error('the wasm module finished with error:', e);
+        // console.log(typeof e);
+        // console.log(e.exit_code);
+        // console.log(Object.entries(e));
+        console.log('the wasm module finished with exit code:', e);
     }
 };
 

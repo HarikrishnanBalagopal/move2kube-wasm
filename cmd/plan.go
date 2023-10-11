@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/konveyor/move2kube-wasm/common"
-	"github.com/mholt/archiver/v3"
 
 	// "github.com/konveyor/move2kube/common/download"
 	// "github.com/konveyor/move2kube/common/vcs"
@@ -152,28 +151,28 @@ func planHandler(cmd *cobra.Command, flags planFlags) {
 		if err != nil {
 			logrus.Fatalf("Unable to access source directory : %s", err)
 		}
-		if !fi.IsDir() {
-			if strings.HasSuffix(fi.Name(), ".zip") {
-				// expand the archive
-				archivePath := srcpath
-				archiveExpandedPath := srcpath + "-expanded"
-				if err := archiver.Unarchive(archivePath, archiveExpandedPath); err != nil {
-					logrus.Errorf("failed to expand the archive at path %s into path %s . Trying other formats. Error: %q", archivePath, archiveExpandedPath, err)
-					zip_helper(archivePath, archiveExpandedPath)
-					// filename := archivePath
-					// if filepath.Ext(filename) == ".zip" {
-					// 	if err := archiver.NewZip().Unarchive(archivePath, archiveExpandedPath); err != nil {
-					// 		logrus.Fatalf("failed to expand the zip archive at path %s to the path %s . Error: %q", archivePath, archiveExpandedPath, err)
-					// 	}
-					// } else {
-					// 	logrus.Fatalf("the archive at path %s is not in a supported format. Please use one of the supported formats: %+v", archivePath, []string{".zip", ".tar", ".tgz", ".gz"})
-					// }
-					// logrus.Fatalf("failed to expand the archive at path %s into path %s . Trying other formats. Error: %q", archivePath, archiveExpandedPath, err)
-				}
-			} else {
-				logrus.Fatalf("The input path '%s' is a file, expected a directory", srcpath)
-			}
-		}
+		// if !fi.IsDir() {
+		// 	if strings.HasSuffix(fi.Name(), ".zip") {
+		// 		// expand the archive
+		// 		archivePath := srcpath
+		// 		archiveExpandedPath := srcpath + "-expanded"
+		// 		if err := archiver.Unarchive(archivePath, archiveExpandedPath); err != nil {
+		// 			logrus.Errorf("failed to expand the archive at path %s into path %s . Trying other formats. Error: %q", archivePath, archiveExpandedPath, err)
+		// 			zip_helper(archivePath, archiveExpandedPath)
+		// 			// filename := archivePath
+		// 			// if filepath.Ext(filename) == ".zip" {
+		// 			// 	if err := archiver.NewZip().Unarchive(archivePath, archiveExpandedPath); err != nil {
+		// 			// 		logrus.Fatalf("failed to expand the zip archive at path %s to the path %s . Error: %q", archivePath, archiveExpandedPath, err)
+		// 			// 	}
+		// 			// } else {
+		// 			// 	logrus.Fatalf("the archive at path %s is not in a supported format. Please use one of the supported formats: %+v", archivePath, []string{".zip", ".tar", ".tgz", ".gz"})
+		// 			// }
+		// 			// logrus.Fatalf("failed to expand the archive at path %s into path %s . Trying other formats. Error: %q", archivePath, archiveExpandedPath, err)
+		// 		}
+		// 	} else {
+		// 		logrus.Fatalf("The input path '%s' is a file, expected a directory", srcpath)
+		// 	}
+		// }
 	}
 	{
 		logrus.Infof("before os.Stat on plan file")
