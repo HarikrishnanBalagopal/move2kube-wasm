@@ -17,8 +17,63 @@ const sock_accept = (sock, fd_flags, ro_fd, ro_addr) => {
     return 0;
 };
 
+const add_controls = (got_file_callback) => {
+    const div_controls = document.createElement('div');
+    div_controls.classList.add('controls');
+    const label_input_file = document.createElement('label');
+    label_input_file.textContent = 'select a zip file to process:';
+    const input_file = document.createElement('input');
+    input_file.setAttribute('type', 'file');
+    input_file.addEventListener('change', () => {
+        if (!input_file.files || input_file.files.length === 0) return;
+        console.log('got these files', input_file.files.length, input_file.files);
+        const files = Array.from(input_file.files)
+        files.forEach(async (f) => {
+            console.log('reading the file named', f.name);
+            const reader = new FileReader();
+            const get_contents = new Promise((resolve, reject) => {
+                reader.addEventListener('load', () => resolve(reader.result));
+                reader.addEventListener('error', (e) => reject(e));
+            });
+            reader.readAsArrayBuffer(f);
+            try {
+                const contents = await get_contents;
+                console.log('contents', contents);
+                const contentsArr = new Uint8Array(contents);
+                got_file_callback(contentsArr);
+            } catch (e) {
+                console.error(`failed to read the file '${f.name}' . error:`, e);
+            }
+        });
+    });
+    label_input_file.appendChild(input_file);
+    div_controls.appendChild(label_input_file);
+    document.body.appendChild(div_controls);
+};
+
+const add_styles = () => {
+    const styles = document.createElement('style');
+    styles.innerHTML = `
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+}
+
+.controls {
+    padding: 1em;
+}
+`;
+    document.head.appendChild(styles);
+};
+
 const main = async () => {
     console.log('main start');
+    add_styles();
+    add_controls();
 
     // create terminal element
     const rootE = document.createElement('div');
