@@ -12,7 +12,7 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "@bjorn3/browser_wasi_shim": "^0.2.14",
+    "@bjorn3/browser_wasi_shim": "github:bjorn3/browser_wasi_shim#main",
     "xterm": "^5.2.1",
     "xterm-addon-fit": "^0.7.0"
   },

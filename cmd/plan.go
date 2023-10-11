@@ -121,21 +121,24 @@ func planHandler(cmd *cobra.Command, flags planFlags) {
 	}
 	logrus.Infof("planfile: '%s'", planfile)
 	fi, err = os.Stat(planfile)
+	if err == nil && fi.IsDir() {
+		planfile = filepath.Join(planfile, common.DefaultPlanFile)
+		_, err = os.Stat(planfile)
+	}
 	if err != nil {
 		if os.IsNotExist(err) {
+			logrus.Warnf("the plan file doesn't exist")
 			if strings.HasSuffix(planfile, string(os.PathSeparator)) {
 				planfile = filepath.Join(planfile, common.DefaultPlanFile)
 			} else if !strings.Contains(filepath.Base(planfile), ".") {
 				planfile = filepath.Join(planfile, common.DefaultPlanFile)
 			}
 		} else {
-			logrus.Warnf("failed to stat. file info: %+v", fi)
+			// logrus.Warnf("failed to stat. file info: %+v", fi)
 			logrus.Fatalf("failed to access the plan file at path '%s' . Error: %q", planfile, err)
 		}
 	}
-	if fi.IsDir() {
-		planfile = filepath.Join(planfile, common.DefaultPlanFile)
-	}
+
 	// qaengine.StartEngine(true, 0, true)
 	// qaengine.SetupConfigFile("", flags.setconfigs, flags.configs, flags.preSets, false)
 	// if flags.progressServerPort != 0 {
@@ -155,6 +158,16 @@ func planHandler(cmd *cobra.Command, flags planFlags) {
 			logrus.Fatalf("Did not detect any services in the directory %s . Also we didn't find any default transformers to run.", srcpath)
 		}
 		logrus.Warnf("Did not detect any services in the directory %s . Also we didn't find any default transformers to run.", srcpath)
+	}
+	{
+		logrus.Infof("after planning, list files")
+		fs, err := os.ReadDir(".")
+		if err != nil {
+			panic(err)
+		}
+		for i, f := range fs {
+			logrus.Infof("file[%d] %+v", i, f)
+		}
 	}
 }
 
