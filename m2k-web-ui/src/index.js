@@ -17,72 +17,7 @@ const sock_accept = (sock, fd_flags, ro_fd, ro_addr) => {
     return 0;
 };
 
-const add_controls = (got_file_callback) => {
-    const div_controls = document.createElement('div');
-    div_controls.classList.add('controls');
-    const label_input_file = document.createElement('label');
-    label_input_file.textContent = 'select a zip file to process:';
-    const input_file = document.createElement('input');
-    input_file.setAttribute('type', 'file');
-    input_file.addEventListener('change', () => {
-        if (!input_file.files || input_file.files.length === 0) return;
-        console.log('got these files', input_file.files.length, input_file.files);
-        const files = Array.from(input_file.files)
-        files.forEach(async (f) => {
-            console.log('reading the file named', f.name);
-            const reader = new FileReader();
-            const get_contents = new Promise((resolve, reject) => {
-                reader.addEventListener('load', () => resolve(reader.result));
-                reader.addEventListener('error', (e) => reject(e));
-            });
-            reader.readAsArrayBuffer(f);
-            try {
-                const contents = await get_contents;
-                console.log('contents', contents);
-                const contentsArr = new Uint8Array(contents);
-                got_file_callback(contentsArr);
-            } catch (e) {
-                console.error(`failed to read the file '${f.name}' . error:`, e);
-            }
-        });
-    });
-    label_input_file.appendChild(input_file);
-    div_controls.appendChild(label_input_file);
-    document.body.appendChild(div_controls);
-};
-
-const add_styles = () => {
-    const styles = document.createElement('style');
-    styles.innerHTML = `
-* {
-    box-sizing: border-box;
-}
-
-body {
-    margin: 0;
-    min-height: 100vh;
-}
-
-.controls {
-    padding: 1em;
-}
-`;
-    document.head.appendChild(styles);
-};
-
-const main = async () => {
-    console.log('main start');
-    add_styles();
-    add_controls();
-
-    // create terminal element
-    const rootE = document.createElement('div');
-    rootE.id = 'div-root';
-    rootE.style.width = '1024px';
-    rootE.style.height = '640px';
-    // rootE.style.border = '1px solid red';
-    document.body.appendChild(rootE);
-
+const start_wasm = async (rootE, filename, fileContentsArr) => {
     // create terminal object and attach to the element
     const term = new Terminal({
         convertEol: true,
@@ -119,7 +54,8 @@ const main = async () => {
 
     // const args = ["move2kube", "-h"];
     // const args = ["move2kube", "version", "-l"];
-    const args = ["move2kube", "plan"];
+    // const args = ["move2kube", "plan"];
+    const args = ["move2kube", "plan", "-s", filename];
     const env = [];
     // const env = ["FOO=bar", "MYPWD=/"];
     // const env = ["FOO=bar", "PWD=/", "MYPWD=/"];
@@ -136,6 +72,7 @@ const main = async () => {
             "example.c": new File(encoder.encode(`#include "a"`)),
             "hello.rs": new File(encoder.encode(`fn main() { println!("Hello World!"); }`)),
             "dep.json": new File(encoder.encode(`{"a": 42, "b": 12}`)),
+            [filename]: new File(fileContentsArr),
         }),
     ];
     const wasi = new WASI(args, env, fds);
@@ -172,7 +109,88 @@ const main = async () => {
     console.log(wasmModule);
     console.log(wasmModule.instance.exports);
     // console.log(m.instance.exports._start());
-    wasi.start(wasmModule.instance);
+    try {
+        wasi.start(wasmModule.instance);
+    } catch (e) {
+        console.log(e);
+        console.log(e.exit_code);
+        console.log(Object.items(e));
+        console.error('the wasm module finished with error:', e);
+    }
+};
+
+const add_controls = (rootE) => {
+    const div_controls = document.createElement('div');
+    div_controls.classList.add('controls');
+
+    // const button_start = document.createElement('button');
+    // button_start.textContent = 'start';
+    // div_controls.appendChild(button_start);
+
+    const label_input_file = document.createElement('label');
+    label_input_file.textContent = 'please select a zip/tar archive containing the directory to be processed:';
+    const input_file = document.createElement('input');
+    input_file.setAttribute('type', 'file');
+    input_file.setAttribute('accept', '.zip,.tar,.tar.gz,.tgz');
+    input_file.addEventListener('change', async () => {
+        if (!input_file.files || input_file.files.length === 0) return;
+        console.log('got these files', input_file.files.length, input_file.files);
+        const files = Array.from(input_file.files)
+        if (files.length > 1) return console.error('only single file processing is supported for now');
+        const f = files[0];
+        console.log('reading the file named', f.name);
+        const reader = new FileReader();
+        const get_contents = new Promise((resolve, reject) => {
+            reader.addEventListener('load', () => resolve(reader.result));
+            reader.addEventListener('error', (e) => reject(e));
+        });
+        reader.readAsArrayBuffer(f);
+        try {
+            const contents = await get_contents;
+            console.log('contents', contents);
+            const contentsArr = new Uint8Array(contents);
+            start_wasm(rootE, f.name, contentsArr);
+        } catch (e) {
+            console.error(`failed to read the file '${f.name}' . error:`, e);
+        }
+    });
+    label_input_file.appendChild(input_file);
+    div_controls.appendChild(label_input_file);
+    document.body.appendChild(div_controls);
+};
+
+const add_styles = () => {
+    const styles = document.createElement('style');
+    styles.innerHTML = `
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+}
+
+.controls {
+    padding: 1em;
+}
+`;
+    document.head.appendChild(styles);
+};
+
+const main = async () => {
+    console.log('main start');
+    add_styles();
+
+    // create terminal element
+    const rootE = document.createElement('div');
+    rootE.id = 'div-root';
+    rootE.style.width = '1024px';
+    rootE.style.height = '640px';
+    // rootE.style.border = '1px solid red';
+    document.body.appendChild(rootE);
+
+    add_controls(rootE);
 
     console.log('main done');
 };
