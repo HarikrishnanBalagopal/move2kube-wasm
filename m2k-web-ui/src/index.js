@@ -112,7 +112,7 @@ const main = async () => {
             return return_value;
         };
     });
-    const wasmUrl = '/move2kube.wasm';
+    const wasmUrl = 'move2kube.wasm';
     const wasmModule = await WebAssembly.instantiateStreaming(fetch(wasmUrl), importObject);
     console.log(wasmModule);
     console.log(wasmModule.instance.exports);
