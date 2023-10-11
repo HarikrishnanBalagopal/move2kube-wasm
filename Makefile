@@ -25,3 +25,8 @@ build-web:
 .PHONY: serve-web
 serve-web:
 	cd "${WEB_UI_DIR}" && pnpm run serve
+
+.PHONY: copy-web
+copy-web:
+	rm -rf docs/
+	cp -r "${WEB_UI_DIR}/dist" docs
