@@ -47,7 +47,7 @@ func GetRootCmd() *cobra.Command {
 
 	rootCmd.AddCommand(GetVersionCommand())
 	// rootCmd.AddCommand(GetCollectCommand())
-	// rootCmd.AddCommand(GetPlanCommand())
+	rootCmd.AddCommand(GetPlanCommand())
 	// rootCmd.AddCommand(GetTransformCommand())
 	// rootCmd.AddCommand(GetGenerateDocsCommand())
 	// rootCmd.AddCommand(GetGraphCommand())

@@ -23,9 +23,9 @@ const main = async () => {
     // create terminal element
     const rootE = document.createElement('div');
     rootE.id = 'div-root';
-    rootE.style.width = '640px';
-    rootE.style.height = '480px';
-    rootE.style.border = '1px solid red';
+    rootE.style.width = '1024px';
+    rootE.style.height = '640px';
+    // rootE.style.border = '1px solid red';
     document.body.appendChild(rootE);
 
     // create terminal object and attach to the element
@@ -62,8 +62,11 @@ const main = async () => {
         }
     }
 
-    const args = ["bin", "arg1", "arg2"];
-    const env = ["FOO=bar", "MYPWD=/"];
+    // const args = ["move2kube", "-h"];
+    // const args = ["move2kube", "version", "-l"];
+    const args = ["move2kube", "plan"];
+    const env = [];
+    // const env = ["FOO=bar", "MYPWD=/"];
     // const env = ["FOO=bar", "PWD=/", "MYPWD=/"];
     // const env = ["FOO=bar", "PWD=.", "MYPWD=."];
     // const env = ["FOO=bar", "PWD=app", "MYPWD=app"];
@@ -104,7 +107,9 @@ const main = async () => {
             // proxy for path_open !! 3 1 151536 10 0 0n 0n 0 133972
             // proxy for path_open !! 3 1 151536 8 0 0n 0n 0 133972
             console.log('proxy for', k, '!!', ...args);
-            return orig(...args);
+            const return_value = orig(...args);
+            console.log('return_value for', k, 'is', return_value);
+            return return_value;
         };
     });
     const wasmUrl = '/move2kube.wasm';
