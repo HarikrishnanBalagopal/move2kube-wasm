@@ -3,16 +3,15 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 
-	"archive/zip"
 	// "os/signal"
 	"path/filepath"
 	"strings"
 
 	"github.com/konveyor/move2kube-wasm/common"
+	"github.com/mholt/archiver/v3"
 
 	// "github.com/konveyor/move2kube/common/download"
 	// "github.com/konveyor/move2kube/common/vcs"
@@ -41,48 +40,48 @@ type planFlags struct {
 	preSets []string
 }
 
-func zip_helper(src, dst string) {
-	// Open a zip archive for reading.
-	r, err := zip.OpenReader(src)
-	if err != nil {
-		logrus.Fatalf("impossible to open zip reader: %s", err)
-	}
-	defer r.Close()
+// func zip_helper(src, dst string) {
+// 	// Open a zip archive for reading.
+// 	r, err := zip.OpenReader(src)
+// 	if err != nil {
+// 		logrus.Fatalf("impossible to open zip reader: %s", err)
+// 	}
+// 	defer r.Close()
 
-	// Iterate through the files in the archive,
-	for k, f := range r.File {
-		fmt.Printf("Unzipping %s:\n", f.Name)
-		rc, err := f.Open()
-		if err != nil {
-			logrus.Fatalf("impossible to open file n°%d in archine: %s", k, err)
-		}
-		defer rc.Close()
-		// define the new file path
-		newFilePath := filepath.Join(dst, f.Name)
+// 	// Iterate through the files in the archive,
+// 	for k, f := range r.File {
+// 		fmt.Printf("Unzipping %s:\n", f.Name)
+// 		rc, err := f.Open()
+// 		if err != nil {
+// 			logrus.Fatalf("impossible to open file n°%d in archine: %s", k, err)
+// 		}
+// 		defer rc.Close()
+// 		// define the new file path
+// 		newFilePath := filepath.Join(dst, f.Name)
 
-		// CASE 1 : we have a directory
-		if f.FileInfo().IsDir() {
-			// if we have a directory we have to create it
-			err = os.MkdirAll(newFilePath, 0777)
-			if err != nil {
-				logrus.Fatalf("impossible to MkdirAll: %s", err)
-			}
-			// we can go to next iteration
-			continue
-		}
+// 		// CASE 1 : we have a directory
+// 		if f.FileInfo().IsDir() {
+// 			// if we have a directory we have to create it
+// 			err = os.MkdirAll(newFilePath, 0777)
+// 			if err != nil {
+// 				logrus.Fatalf("impossible to MkdirAll: %s", err)
+// 			}
+// 			// we can go to next iteration
+// 			continue
+// 		}
 
-		// CASE 2 : we have a file
-		// create new uncompressed file
-		uncompressedFile, err := os.Create(newFilePath)
-		if err != nil {
-			logrus.Fatalf("impossible to create uncompressed: %s", err)
-		}
-		_, err = io.Copy(uncompressedFile, rc)
-		if err != nil {
-			logrus.Fatalf("impossible to copy file n°%d: %s", k, err)
-		}
-	}
-}
+// 		// CASE 2 : we have a file
+// 		// create new uncompressed file
+// 		uncompressedFile, err := os.Create(newFilePath)
+// 		if err != nil {
+// 			logrus.Fatalf("impossible to create uncompressed: %s", err)
+// 		}
+// 		_, err = io.Copy(uncompressedFile, rc)
+// 		if err != nil {
+// 			logrus.Fatalf("impossible to copy file n°%d: %s", k, err)
+// 		}
+// 	}
+// }
 
 func planHandler(cmd *cobra.Command, flags planFlags) {
 	ctx, _ := context.WithCancel(cmd.Context())
@@ -151,37 +150,56 @@ func planHandler(cmd *cobra.Command, flags planFlags) {
 		if err != nil {
 			logrus.Fatalf("Unable to access source directory : %s", err)
 		}
-		// if !fi.IsDir() {
-		// 	if strings.HasSuffix(fi.Name(), ".zip") {
-		// 		// expand the archive
-		// 		archivePath := srcpath
-		// 		archiveExpandedPath := srcpath + "-expanded"
-		// 		if err := archiver.Unarchive(archivePath, archiveExpandedPath); err != nil {
-		// 			logrus.Errorf("failed to expand the archive at path %s into path %s . Trying other formats. Error: %q", archivePath, archiveExpandedPath, err)
-		// 			zip_helper(archivePath, archiveExpandedPath)
-		// 			// filename := archivePath
-		// 			// if filepath.Ext(filename) == ".zip" {
-		// 			// 	if err := archiver.NewZip().Unarchive(archivePath, archiveExpandedPath); err != nil {
-		// 			// 		logrus.Fatalf("failed to expand the zip archive at path %s to the path %s . Error: %q", archivePath, archiveExpandedPath, err)
-		// 			// 	}
-		// 			// } else {
-		// 			// 	logrus.Fatalf("the archive at path %s is not in a supported format. Please use one of the supported formats: %+v", archivePath, []string{".zip", ".tar", ".tgz", ".gz"})
-		// 			// }
-		// 			// logrus.Fatalf("failed to expand the archive at path %s into path %s . Trying other formats. Error: %q", archivePath, archiveExpandedPath, err)
-		// 		}
-		// 	} else {
-		// 		logrus.Fatalf("The input path '%s' is a file, expected a directory", srcpath)
-		// 	}
-		// }
+		if !fi.IsDir() {
+			if strings.HasSuffix(fi.Name(), ".zip") {
+				// expand the archive
+				archivePath := srcpath
+				archiveExpandedPath := srcpath + "-expanded"
+				if err := archiver.Unarchive(archivePath, archiveExpandedPath); err != nil {
+					logrus.Fatalf("failed to expand the archive at path %s into path %s . Trying other formats. Error: %q", archivePath, archiveExpandedPath, err)
+				}
+				srcpath = archiveExpandedPath
+				logrus.Infof("using '%s' as the source directory", srcpath)
+			} else {
+				logrus.Fatalf("The input path '%s' is a file, expected a directory", srcpath)
+			}
+		}
 	}
 	{
-		logrus.Infof("before os.Stat on plan file")
+		logrus.Infof("DEBUG before os.Stat on plan file")
 		fs, err := os.ReadDir(".")
 		if err != nil {
 			panic(err)
 		}
 		for i, f := range fs {
-			logrus.Infof("file[%d] %+v", i, f)
+			logrus.Infof("DEBUG file[%d] %+v", i, f)
+		}
+	}
+	{
+		logrus.Infof("DEBUG look at files in source directory")
+		// fs, err := os.ReadDir(srcpath)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// for i, f := range fs {
+		// 	logrus.Infof("file[%d] %+v", i, f)
+		// }
+		if err := filepath.Walk(srcpath, func(path string, info fs.FileInfo, err error) error {
+			if err != nil {
+				return fmt.Errorf("failed to filepath.Walk on file '%s'. error: %w", path, err)
+			}
+			logrus.Infof("DEBUG file[%s] %+v", path, info)
+			if info.IsDir() {
+				return nil
+			}
+			byt, err := os.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("failed to read the file '%s'. error: %w", path, err)
+			}
+			logrus.Infof("the file data is:\n%s", string(byt))
+			return nil
+		}); err != nil {
+			logrus.Fatalf("failed to filepath.Walk on directory '%s'. error: %q", srcpath, err)
 		}
 	}
 	logrus.Infof("planfile: '%s'", planfile)
@@ -225,13 +243,13 @@ func planHandler(cmd *cobra.Command, flags planFlags) {
 		logrus.Warnf("Did not detect any services in the directory %s . Also we didn't find any default transformers to run.", srcpath)
 	}
 	{
-		logrus.Infof("after planning, list files")
+		logrus.Infof("DEBUG after planning, list files")
 		fs, err := os.ReadDir(".")
 		if err != nil {
 			panic(err)
 		}
 		for i, f := range fs {
-			logrus.Infof("file[%d] %+v", i, f)
+			logrus.Infof("DEBUG file[%d] %+v", i, f)
 		}
 	}
 }

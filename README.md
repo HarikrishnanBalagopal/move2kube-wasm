@@ -45,4 +45,4 @@ $ make all
 $ make copy-web
 ```
 
-This copies the built `m2k-web-ui/dist` directory into `docs` directory
+This copies the built `m2k-web-ui/dist` directory into `docs` directory.
