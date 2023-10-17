@@ -100,7 +100,7 @@ func planHandler(cmd *cobra.Command, flags planFlags) {
 	planfile := flags.planfile
 	srcpath := flags.srcpath
 	name := flags.name
-	// isRemotePath := vcs.IsRemotePath(srcpath)
+	//isRemotePath := vcs.IsRemotePath(srcpath)
 	// Check if the default customization folder exists in the working directory.
 	// If not, skip the customization option
 	if !cmd.Flags().Changed(customizationsFlag) {
@@ -222,11 +222,11 @@ func planHandler(cmd *cobra.Command, flags planFlags) {
 		}
 	}
 
-	// qaengine.StartEngine(true, 0, true)
-	// qaengine.SetupConfigFile("", flags.setconfigs, flags.configs, flags.preSets, false)
-	// if flags.progressServerPort != 0 {
-	// 	startPlanProgressServer(flags.progressServerPort)
-	// }
+	//qaengine.StartEngine(true, 0, true)
+	//qaengine.SetupConfigFile("", flags.setconfigs, flags.configs, flags.preSets, false)
+	//if flags.progressServerPort != 0 {
+	//	startPlanProgressServer(flags.progressServerPort)
+	//}
 	p, err := lib.CreatePlan(ctx, srcpath, "", customizationsPath, flags.transformerSelector, name)
 	if err != nil {
 		logrus.Fatalf("failed to create the plan. Error: %q", err)

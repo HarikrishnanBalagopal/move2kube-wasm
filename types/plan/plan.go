@@ -3,6 +3,7 @@ package plan
 import (
 	"github.com/konveyor/move2kube-wasm/common"
 	"github.com/konveyor/move2kube-wasm/types"
+	transformertypes "github.com/konveyor/move2kube-wasm/types/transformer"
 	// transformertypes "github.com/konveyor/move2kube/types/transformer"
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -32,9 +33,9 @@ type Spec struct {
 
 // PlanArtifact stores the artifact with the transformerName
 type PlanArtifact struct {
-	ServiceName     string `yaml:"-"`
-	TransformerName string `yaml:"transformerName"`
-	// transformertypes.Artifact `yaml:",inline"`
+	ServiceName               string `yaml:"-"`
+	TransformerName           string `yaml:"transformerName"`
+	transformertypes.Artifact `yaml:",inline"`
 }
 
 // NewPlan creates a new plan
