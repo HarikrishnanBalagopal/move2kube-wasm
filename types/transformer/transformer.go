@@ -21,6 +21,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
+// TransformerKind represents the Transformer kind
+const TransformerKind = "Transformer"
+
 // Transformer defines definition of cf runtime instance apps file
 type Transformer struct {
 	types.TypeMeta   `yaml:",inline" json:",inline"`
@@ -70,4 +73,23 @@ type ArtifactProcessConfig struct {
 type ProducedArtifact struct {
 	ChangeTypeTo ArtifactType `yaml:"changeTypeTo" json:"changeTypeTo"`
 	Disabled     bool         `yaml:"disabled" json:"disabled"`
+}
+
+// NewTransformer creates a new instance of tansformer
+func NewTransformer() Transformer {
+	return Transformer{
+		TypeMeta: types.TypeMeta{
+			Kind:       TransformerKind,
+			APIVersion: types.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: types.ObjectMeta{
+			Labels: map[string]string{},
+		},
+		Spec: TransformerSpec{
+			TemplatesDir: "templates/",
+			DirectoryDetect: DirectoryDetect{
+				Levels: 0,
+			},
+		},
+	}
 }

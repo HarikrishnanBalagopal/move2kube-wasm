@@ -21,11 +21,43 @@ import (
 	"github.com/konveyor/move2kube-wasm/common"
 	"github.com/konveyor/move2kube-wasm/common/deepcopy"
 	"github.com/konveyor/move2kube-wasm/common/pathconverters"
+	"github.com/konveyor/move2kube-wasm/types"
 	environmenttypes "github.com/konveyor/move2kube-wasm/types/environment"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cast"
 	"io/fs"
+	"net"
+	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
+	"strings"
+)
+
+const (
+	workspaceDir    = "workspace"
+	templatePattern = "{{"
+)
+
+var (
+	// GRPCEnvName represents the environment variable name used to pass the GRPC server information to the transformers
+	GRPCEnvName = strings.ToUpper(types.AppNameShort) + "_QA_GRPC_SERVER"
+	// ProjectNameEnvName stores the project name
+	ProjectNameEnvName = strings.ToUpper(types.AppNameShort) + "_PROJECT_NAME"
+	// SourceEnvName stores the source path
+	SourceEnvName = strings.ToUpper(types.AppNameShort) + "_SOURCE"
+	// OutputEnvName stores the output path
+	OutputEnvName = strings.ToUpper(types.AppNameShort) + "_OUTPUT"
+	// ContextEnvName stores the context
+	ContextEnvName = strings.ToUpper(types.AppNameShort) + "_CONTEXT"
+	// CurrOutputEnvName stores the location of output from the previous iteration
+	CurrOutputEnvName = strings.ToUpper(types.AppNameShort) + "_CURRENT_OUTPUT"
+	// RelTemplatesDirEnvName stores the rel templates directory
+	RelTemplatesDirEnvName = strings.ToUpper(types.AppNameShort) + "_RELATIVE_TEMPLATES_DIR"
+	// TempPathEnvName stores the temp path
+	TempPathEnvName = strings.ToUpper(types.AppNameShort) + "_TEMP"
+	// EnvNameEnvName stores the environment name
+	EnvNameEnvName = strings.ToUpper(types.AppNameShort) + "_ENV_NAME"
 )
 
 // Environment is used to manage EnvironmentInstances
@@ -177,6 +209,67 @@ func (e *Environment) Decode(obj interface{}) interface{} {
 		logrus.Errorf("Unable to process paths for obj %+v : %s", dupobj, err)
 	}
 	return dupobj
+}
+
+// NewEnvironment creates a new environment
+func NewEnvironment(envInfo EnvInfo, grpcQAReceiver net.Addr) (env *Environment, err error) {
+	if !common.IsPresent(envInfo.EnvPlatformConfig.Platforms, runtime.GOOS) && envInfo.EnvPlatformConfig.Container.Image == "" {
+		return nil, fmt.Errorf("platform '%s' is not supported", runtime.GOOS)
+	}
+	containerInfo := envInfo.EnvPlatformConfig.Container
+	tempPath, err := os.MkdirTemp(common.TempPath, "environment-"+envInfo.Name+"-*")
+	if err != nil {
+		return env, fmt.Errorf("failed to create the temporary directory. Error: %w", err)
+	}
+	envInfo.TempPath = tempPath
+	env = &Environment{
+		EnvInfo:      envInfo,
+		Children:     []*Environment{},
+		TempPathsMap: map[string]string{},
+		active:       true,
+	}
+	if containerInfo.Image == "" {
+		env.Env, err = NewLocal(envInfo, grpcQAReceiver)
+		if err != nil {
+			return env, fmt.Errorf("failed to create the local environment. Error: %w", err)
+		}
+		return env, nil
+	}
+	envVariableName := common.MakeStringEnvNameCompliant(containerInfo.Image)
+	// TODO: replace below signalling mechanism with `prefersLocalExecutuion: true` in the transformer.yaml
+	// Check if image is part of the current environment.
+	// It will be set as environment variable with root as base path of move2kube
+	// When running in a process shared environment the environment variable will point to the base pid of the container for the image
+	envvars := os.Environ()
+	found := ""
+	for _, envvar := range envvars {
+		envvarpair := strings.SplitN(envvar, "=", 2)
+		if len(envvarpair) == 2 && envvarpair[0] == envVariableName {
+			found = envvarpair[1]
+			break
+		}
+	}
+	if found == "" {
+		logrus.Debugf("did not find the environment variable '%s'", envVariableName)
+	} else {
+		logrus.Debugf("found the environment variable '%s' with the value '%s'", envVariableName, found)
+		if _, err := cast.ToIntE(found); err != nil {
+			// the value is a string, probably the path to the transformer folder inside the image.
+			envInfo.Context = found
+			env.Env, err = NewLocal(envInfo, grpcQAReceiver)
+			if err == nil {
+				return env, nil
+			}
+			logrus.Errorf("failed to create the local environment. Falling back to peer container environment. Error: %q", err)
+		}
+	}
+	//if env.Env == nil {
+	//	env.Env, err = NewPeerContainer(envInfo, grpcQAReceiver, containerInfo, envInfo.SpawnContainers)
+	//	if err != nil {
+	//		return env, fmt.Errorf("failed to create the peer container environment. Error: %w", err)
+	//	}
+	//}
+	return env, nil
 }
 
 // GetEnvironmentContext returns the context path within the environment

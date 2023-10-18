@@ -4,6 +4,7 @@ import (
 	"github.com/konveyor/move2kube-wasm/common"
 	"github.com/konveyor/move2kube-wasm/types"
 	transformertypes "github.com/konveyor/move2kube-wasm/types/transformer"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// transformertypes "github.com/konveyor/move2kube/types/transformer"
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -25,10 +26,10 @@ type Spec struct {
 
 	Services map[string][]PlanArtifact `yaml:"services"` //[servicename]
 
-	// TransformerSelector          metav1.LabelSelector `yaml:"transformerSelector,omitempty"`
-	Transformers                 map[string]string `yaml:"transformers,omitempty" m2kpath:"normal"` //[name]filepath
-	InvokedByDefaultTransformers []string          `yaml:"invokedByDefaultTransformers,omitempty"`
-	DisabledTransformers         map[string]string `yaml:"disabledTransformers,omitempty" m2kpath:"normal"` //[name]filepath
+	TransformerSelector          metav1.LabelSelector `yaml:"transformerSelector,omitempty"`
+	Transformers                 map[string]string    `yaml:"transformers,omitempty" m2kpath:"normal"` //[name]filepath
+	InvokedByDefaultTransformers []string             `yaml:"invokedByDefaultTransformers,omitempty"`
+	DisabledTransformers         map[string]string    `yaml:"disabledTransformers,omitempty" m2kpath:"normal"` //[name]filepath
 }
 
 // PlanArtifact stores the artifact with the transformerName

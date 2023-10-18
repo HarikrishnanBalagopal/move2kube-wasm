@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-
 	// "os/signal"
 	"path/filepath"
 	"strings"
@@ -85,16 +84,16 @@ type planFlags struct {
 
 func planHandler(cmd *cobra.Command, flags planFlags) {
 	ctx, _ := context.WithCancel(cmd.Context())
-	// logrus.AddHook(common.NewCleanupHook(cancel))
-	// logrus.AddHook(common.NewCleanupHook(lib.Destroy))
-	// ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
-	// go func() {
-	// 	<-ctx.Done()
-	// 	lib.Destroy()
-	// 	stop()
-	// 	common.Interrupt()
-	// }()
-	// defer lib.Destroy()
+	//logrus.AddHook(common.NewCleanupHook(cancel))
+	//logrus.AddHook(common.NewCleanupHook(lib.Destroy))
+	//ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
+	//go func() {
+	//	<-ctx.Done()
+	//	lib.Destroy()
+	//	stop()
+	//	common.Interrupt()
+	//}()
+	//defer lib.Destroy()
 
 	var err error
 	planfile := flags.planfile

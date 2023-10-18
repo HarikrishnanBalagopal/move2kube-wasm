@@ -18,7 +18,14 @@ package common
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
+	"github.com/konveyor/move2kube-wasm/types"
+	"github.com/mitchellh/mapstructure"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"reflect"
+
 	//"github.com/go-git/go-git/v5"
 	"io"
 	"os"
@@ -333,4 +340,205 @@ func ReplaceStartingTerminatingHyphens(str, startReplaceStr, endReplaceStr strin
 		str = str[:len(str)-1] + endReplaceStr
 	}
 	return str
+}
+
+// StringToK8sQuantityHookFunc returns a DecodeHookFunc that converts strings to a Kubernetes resource limits quantity.
+func StringToK8sQuantityHookFunc() mapstructure.DecodeHookFunc {
+	return func(from reflect.Type, to reflect.Type, data interface{}) (interface{}, error) {
+		if from.Kind() != reflect.String {
+			return data, nil
+		}
+		if to != reflect.TypeOf(resource.Quantity{}) {
+			return data, nil
+		}
+		quantity, err := resource.ParseQuantity(data.(string))
+		if err != nil {
+			return data, fmt.Errorf("failed to parse the string '%s' as a K8s Quantity. Error: %w", data.(string), err)
+		}
+		return quantity, nil
+	}
+}
+
+// GetObjFromInterface loads from map[string]interface{} to struct
+func GetObjFromInterface(obj interface{}, loadinto interface{}) error {
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook: StringToK8sQuantityHookFunc(),
+		Result:     &loadinto,
+		TagName:    "yaml",
+		Squash:     true,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get the mapstructure decoder for the type %T . Error: %w", loadinto, err)
+	}
+	// logrus.Debugf("Loading data into %+v from %+v", loadinto, obj)
+	if err := decoder.Decode(obj); err != nil {
+		return fmt.Errorf("failed to decode the object of type %T and value %+v into the type %T . Error: %w", obj, obj, loadinto, err)
+	}
+	// logrus.Debugf("Object Loaded is %+v", loadinto)
+	return nil
+}
+
+// ReadMove2KubeYaml reads move2kube specific yaml files (like m2k.plan) into an struct.
+// It checks if apiVersion to see if the group is move2kube and also reports if the
+// version is different from the expected version.
+func ReadMove2KubeYaml(path string, out interface{}) error {
+	yamlData, err := os.ReadFile(path)
+	if err != nil {
+		logrus.Errorf("Failed to read the yaml file at path %s Error: %q", path, err)
+		return err
+	}
+	yamlMap := map[string]interface{}{}
+	if err := yaml.Unmarshal([]byte(yamlData), yamlMap); err != nil {
+		logrus.Debugf("Error occurred while unmarshalling yaml file at path %s Error: %q", path, err)
+		return err
+	}
+	groupVersionI, ok := yamlMap["apiVersion"]
+	if !ok {
+		err := fmt.Errorf("did not find apiVersion in the yaml file at path %s", path)
+		logrus.Debug(err)
+		return err
+	}
+	groupVersionStr, ok := groupVersionI.(string)
+	if !ok {
+		err := fmt.Errorf("the apiVersion is not a string in the yaml file at path %s", path)
+		logrus.Debug(err)
+		return err
+	}
+	groupVersion, err := schema.ParseGroupVersion(groupVersionStr)
+	if err != nil {
+		logrus.Debugf("Failed to parse the apiVersion %s Error: %q", groupVersionStr, err)
+		return err
+	}
+	if groupVersion.Group != types.SchemeGroupVersion.Group {
+		err := fmt.Errorf("the file at path %s doesn't have the correct group. Expected group %s Actual group %s", path, types.SchemeGroupVersion.Group, groupVersion.Group)
+		logrus.Debug(err)
+		return err
+	}
+	if groupVersion.Version != types.SchemeGroupVersion.Version {
+		logrus.Warnf("The file at path %s was generated using a different version. File version is %s and move2kube version is %s", path, groupVersion.Version, types.SchemeGroupVersion.Version)
+	}
+	if err := yaml.Unmarshal(yamlData, out); err != nil {
+		logrus.Debugf("Error occurred while unmarshalling yaml file at path %s Error: %q", path, err)
+		return err
+	}
+	return nil
+}
+
+// GetSHA256Hash returns the SHA256 hash of the string.
+// The hash is 256 bits/32 bytes and encoded as a 64 char hexadecimal string.
+func GetSHA256Hash(s string) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(s)))
+}
+
+// MakeStringDNSNameCompliantWithoutDots makes the string into a valid DNS name without dots.
+func MakeStringDNSNameCompliantWithoutDots(s string) string {
+	name := strings.ToLower(s)
+	name = regexp.MustCompile(`[^a-z0-9-]`).ReplaceAllLiteralString(name, "-")
+	start, end := name[0], name[len(name)-1]
+	if start == '-' || end == '-' {
+		logrus.Debugf("The first and/or last characters of the string %q are not alphanumeric.", s)
+	}
+	return name
+}
+
+// MakeStringDNSLabelNameCompliant makes the string a valid DNS label name.
+// See https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names
+// 1. contain at most 63 characters
+// 2. contain only lowercase alphanumeric characters or '-'
+// 3. start with an alphanumeric character
+// 4. end with an alphanumeric character
+func MakeStringDNSLabelNameCompliant(s string) string {
+	name := s
+	if len(name) > 63 {
+		hash := GetSHA256Hash(name)
+		hash = hash[:32]
+		name = name[:63-33] // leave room for the hash (32 chars) plus hyphen (1 char).
+		name = name + "-" + hash
+	}
+	return MakeStringDNSNameCompliantWithoutDots(name)
+}
+
+// MakeStringK8sServiceNameCompliant makes the string a valid K8s service name.
+// See https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service
+// See https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names
+// 1. contain at most 63 characters
+// 2. contain only lowercase alphanumeric characters or '-'
+// 3. start with an alphabetic character
+// 4. end with an alphanumeric character
+func MakeStringK8sServiceNameCompliant(s string) string {
+	if strings.TrimSpace(s) == "" {
+		logrus.Errorf("empty string given to create k8s service name")
+		return s
+	}
+	if !regexp.MustCompile(`^[a-zA-Z]`).MatchString(s) {
+		logrus.Warnf("the given k8s service name '%s' starts with a non-alphabetic character", s)
+	}
+	return MakeStringDNSLabelNameCompliant(s)
+}
+
+// GetTypesMap returns a type registry for the types in the array
+func GetTypesMap(typeInstances interface{}) (typesMap map[string]reflect.Type) {
+	typesMap = map[string]reflect.Type{}
+	types := reflect.ValueOf(typeInstances)
+	for i := 0; i < types.Len(); i++ {
+		t := reflect.TypeOf(types.Index(i).Interface()).Elem()
+		tn := t.Name()
+		if ot, ok := typesMap[tn]; ok {
+			logrus.Errorf("Two transformer classes have the same name %s : %T, %T; Ignoring %T", tn, ot, t, t)
+			continue
+		}
+		typesMap[tn] = t
+	}
+	return typesMap
+}
+
+// GetFilesByExt returns files by extension
+func GetFilesByExt(inputPath string, exts []string) ([]string, error) {
+	var files []string
+	if info, err := os.Stat(inputPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("failed to stat the directory '%s' . Error: %w", inputPath, err)
+	} else if !info.IsDir() {
+		logrus.Warnf("The path '%s' is not a directory.", inputPath)
+	}
+	err := filepath.WalkDir(inputPath, func(path string, info os.DirEntry, err error) error {
+		if err != nil {
+			if path == inputPath {
+				// if the root directory returns an error then stop walking and return this error
+				return err
+			}
+			logrus.Warnf("Skipping the path '%s' due to error: %q", path, err)
+			return nil
+		}
+		// Skip directories
+		if info.IsDir() {
+			for _, dirRegExp := range DefaultIgnoreDirRegexps {
+				if dirRegExp.Match([]byte(filepath.Base(path))) {
+					return filepath.SkipDir
+				}
+			}
+			return nil
+		}
+		fext := filepath.Ext(path)
+		for _, ext := range exts {
+			if fext == ext {
+				files = append(files, path)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return files, fmt.Errorf("failed to walk through the files in the directory '%s' . Error: %w", inputPath, err)
+	}
+	logrus.Debugf("found %d files with the extensions %+v", len(files), exts)
+	return files, nil
+}
+
+// MakeStringEnvNameCompliant makes the string into a valid Environment variable name.
+func MakeStringEnvNameCompliant(s string) string {
+	name := strings.ToUpper(s)
+	name = regexp.MustCompile(`[^A-Z0-9_]`).ReplaceAllLiteralString(name, "_")
+	if regexp.MustCompile(`^[0-9]`).Match([]byte(name)) {
+		logrus.Debugf("The first characters of the string %q must not be a digit.", s)
+	}
+	return name
 }
