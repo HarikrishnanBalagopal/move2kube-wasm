@@ -97,6 +97,18 @@ func (e *Environment) Reset() error {
 	return e.Env.Reset()
 }
 
+// Destroy destroys all artifacts specific to the environment
+func (e *Environment) Destroy() error {
+	e.active = false
+	e.Env.Destroy()
+	for _, env := range e.Children {
+		if err := env.Destroy(); err != nil {
+			logrus.Errorf("Unable to destroy environment : %s", err)
+		}
+	}
+	return nil
+}
+
 // Encode encodes all paths in the obj to be relevant to the environment
 func (e *Environment) Encode(obj interface{}) interface{} {
 	dupobj := deepcopy.DeepCopy(obj)

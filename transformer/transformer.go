@@ -175,6 +175,16 @@ func GetInitializedTransformersF(filters labels.Selector) []Transformer {
 	return filteredTransformers
 }
 
+// Destroy destroys the transformers
+func Destroy() {
+	for _, t := range transformers {
+		_, env := t.GetConfig()
+		if err := env.Destroy(); err != nil {
+			logrus.Errorf("Unable to destroy environment : %s", err)
+		}
+	}
+}
+
 // GetInitializedTransformers returns the list of initialized transformers
 func GetInitializedTransformers() []Transformer {
 	return transformers

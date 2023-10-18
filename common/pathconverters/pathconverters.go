@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/konveyor/move2kube-wasm/common"
 	"github.com/sirupsen/logrus"
+	"path/filepath"
 	"reflect"
 	"strings"
 )
@@ -163,6 +164,43 @@ func process(value reflect.Value, ctx context) error {
 		logrus.Debugf("default. Actual kind: %s", value.Kind())
 	}
 	return nil
+}
+
+// ChangePaths changes paths which are based out of one root to another root
+func ChangePaths(obj interface{}, mapping map[string]string) error {
+	for parent := range mapping {
+		for child := range mapping {
+			if parent != child {
+				if common.IsParent(child, parent) {
+					err := fmt.Errorf("the provided source paths %s is child of %s.", child, parent)
+					logrus.Errorf("%s", err)
+					return err
+				}
+			}
+		}
+	}
+	function := func(path string) (string, error) {
+		if path == "" {
+			return path, nil
+		}
+		if !filepath.IsAbs(path) {
+			err := fmt.Errorf("the input path %q is not an absolute path", path)
+			logrus.Errorf("%s", err)
+			return path, err
+		}
+		for src, dest := range mapping {
+			if common.IsParent(path, src) {
+				rel, err := filepath.Rel(src, path)
+				if err != nil {
+					err := fmt.Errorf("unable to make path (%s) relative to root (%s)", path, src)
+					return path, err
+				}
+				return filepath.Join(dest, rel), nil
+			}
+		}
+		return path, fmt.Errorf("unable to find proper root for %s", path)
+	}
+	return ProcessPaths(obj, function)
 }
 
 // ProcessPaths calls the process function for each path in an object

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/signal"
+
 	// "os/signal"
 	"path/filepath"
 	"strings"
@@ -83,17 +85,17 @@ type planFlags struct {
 // }
 
 func planHandler(cmd *cobra.Command, flags planFlags) {
-	ctx, _ := context.WithCancel(cmd.Context())
-	//logrus.AddHook(common.NewCleanupHook(cancel))
-	//logrus.AddHook(common.NewCleanupHook(lib.Destroy))
-	//ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
-	//go func() {
-	//	<-ctx.Done()
-	//	lib.Destroy()
-	//	stop()
-	//	common.Interrupt()
-	//}()
-	//defer lib.Destroy()
+	ctx, cancel := context.WithCancel(cmd.Context())
+	logrus.AddHook(common.NewCleanupHook(cancel))
+	logrus.AddHook(common.NewCleanupHook(lib.Destroy))
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
+	go func() {
+		<-ctx.Done()
+		lib.Destroy()
+		stop()
+		common.Interrupt()
+	}()
+	defer lib.Destroy()
 
 	var err error
 	planfile := flags.planfile
@@ -150,16 +152,23 @@ func planHandler(cmd *cobra.Command, flags planFlags) {
 			logrus.Fatalf("Unable to access source directory : %s", err)
 		}
 		if !fi.IsDir() {
-			if strings.HasSuffix(fi.Name(), ".zip") {
-				// expand the archive
-				archivePath := srcpath
-				archiveExpandedPath := srcpath + "-expanded"
-				if err := archiver.Unarchive(archivePath, archiveExpandedPath); err != nil {
-					logrus.Fatalf("failed to expand the archive at path %s into path %s . Trying other formats. Error: %q", archivePath, archiveExpandedPath, err)
+			supportedExtensions := []string{".zip", ".tar", ".tar.gz", ".tgz"}
+			supported := false
+			for _, ext := range supportedExtensions {
+				if strings.HasSuffix(fi.Name(), ext) {
+					// expand the archive
+					archivePath := srcpath
+					archiveExpandedPath := srcpath + "-expanded"
+					if err := archiver.Unarchive(archivePath, archiveExpandedPath); err != nil {
+						logrus.Fatalf("failed to expand the archive at path %s into path %s . Trying other formats. Error: %q", archivePath, archiveExpandedPath, err)
+					}
+					srcpath = archiveExpandedPath
+					logrus.Infof("using '%s' as the source directory", srcpath)
+					supported = true
+					break
 				}
-				srcpath = archiveExpandedPath
-				logrus.Infof("using '%s' as the source directory", srcpath)
-			} else {
+			}
+			if !supported {
 				logrus.Fatalf("The input path '%s' is a file, expected a directory", srcpath)
 			}
 		}

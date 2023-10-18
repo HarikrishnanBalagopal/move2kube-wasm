@@ -542,3 +542,17 @@ func MakeStringEnvNameCompliant(s string) string {
 	}
 	return name
 }
+
+// Interrupt creates SIGINT signal
+func Interrupt() error {
+	p, err := os.FindProcess(os.Getpid())
+	if err != nil {
+		logrus.Fatal(err)
+		return err
+	}
+	if err := p.Signal(os.Interrupt); err != nil {
+		logrus.Fatal(err)
+		return err
+	}
+	return nil
+}

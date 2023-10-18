@@ -18,6 +18,14 @@
 
 package lib
 
+import (
+	"github.com/konveyor/move2kube-wasm/common"
+	"github.com/konveyor/move2kube-wasm/transformer"
+	"github.com/konveyor/move2kube-wasm/transformer/external"
+	"github.com/sirupsen/logrus"
+	"os"
+)
+
 //import (
 //	"context"
 //	"fmt"
@@ -125,24 +133,23 @@ package lib
 //	}
 //	return nil
 //}
-//
-//// Destroy destroys the tranformers
-//func Destroy() {
-//	logrus.Debugf("Cleaning up!")
-//	transformer.Destroy()
-//	err := os.RemoveAll(common.TempPath)
-//	if err != nil {
-//		logrus.Debug("failed to delete temp directory. Error : ", err)
-//	}
-//
-//	err = os.RemoveAll(external.DetectContainerOutputDir)
-//	if err != nil {
-//		logrus.Debug("failed to delete temp directory. Error : ", err)
-//	}
-//
-//	err = os.RemoveAll(external.TransformContainerOutputDir)
-//	if err != nil {
-//		logrus.Debug("failed to delete temp directory. Error : ", err)
-//	}
-//
-//}
+
+// Destroy destroys the tranformers
+func Destroy() {
+	logrus.Debugf("Cleaning up!")
+	transformer.Destroy()
+	err := os.RemoveAll(common.TempPath)
+	if err != nil {
+		logrus.Debug("failed to delete temp directory. Error : ", err)
+	}
+
+	err = os.RemoveAll(external.DetectContainerOutputDir)
+	if err != nil {
+		logrus.Debug("failed to delete temp directory. Error : ", err)
+	}
+
+	err = os.RemoveAll(external.TransformContainerOutputDir)
+	if err != nil {
+		logrus.Debug("failed to delete temp directory. Error : ", err)
+	}
+}
