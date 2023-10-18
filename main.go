@@ -7,7 +7,7 @@ import (
 
 func main() {
 	logrus.Infof("start")
-	rootCmd := cmd.GetRootCmd()
+	rootCmd := cmd.GetPlanCommand()
 	if err := rootCmd.Execute(); err != nil {
 		logrus.Fatalf("Error: %q", err)
 	}

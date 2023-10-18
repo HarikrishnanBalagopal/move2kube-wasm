@@ -1,6 +1,8 @@
 package plan
 
 import (
+	"github.com/konveyor/move2kube-wasm/common/deepcopy"
+	"github.com/konveyor/move2kube-wasm/common/pathconverters"
 	"os"
 	"path/filepath"
 
@@ -43,17 +45,16 @@ import (
 
 // WritePlan encodes the plan to yaml converting absolute paths to relative.
 func WritePlan(path string, plan Plan) error {
-	// inputFSPath := plan.Spec.SourceDir
+	inputFSPath := plan.Spec.SourceDir
 	// remoteSrcPath := vcs.GetClonedPath(plan.Spec.SourceDir, common.RemoteSourcesFolder, false)
 	// if remoteSrcPath != "" {
 	// 	inputFSPath = remoteSrcPath
 	// }
-	// newPlan := deepcopy.DeepCopy(plan).(Plan)
-	newPlan := plan // TODO: CHANGE THIS
-	// if err := pathconverters.ChangePaths(&newPlan, map[string]string{inputFSPath: "", common.TempPath: ""}); err != nil {
-	// 	logrus.Errorf("Unable to convert plan to use relative paths : %s", err)
-	// 	return err
-	// }
+	newPlan := deepcopy.DeepCopy(plan).(Plan)
+	if err := pathconverters.ChangePaths(&newPlan, map[string]string{inputFSPath: "", common.TempPath: ""}); err != nil {
+		logrus.Errorf("Unable to convert plan to use relative paths : %s", err)
+		return err
+	}
 	wd, err := os.Getwd()
 	if err != nil {
 		logrus.Errorf("Unable to get current working dir : %s", err)
