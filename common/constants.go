@@ -5,7 +5,7 @@ import (
 	"regexp"
 
 	"github.com/konveyor/move2kube-wasm/types"
-	// "k8s.io/apimachinery/pkg/api/resource"
+	//"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (

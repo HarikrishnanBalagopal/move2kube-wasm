@@ -62,6 +62,15 @@ type DirectoryDetect struct {
 // ArtifactProcessingMode denotes the artifact processing mode
 type ArtifactProcessingMode string
 
+const (
+	// Normal denotes normal consumes
+	Normal ArtifactProcessingMode = "Normal"
+	// MandatoryPassThrough denotes pass through
+	MandatoryPassThrough ArtifactProcessingMode = "MandatoryPassThrough"
+	// OnDemandPassThrough is generally used for dependencies
+	OnDemandPassThrough ArtifactProcessingMode = "OnDemandPassThrough"
+)
+
 // ArtifactProcessConfig stores config for preprocessing artifact
 type ArtifactProcessConfig struct {
 	Merge    bool                   `yaml:"merge" json:"merge"`

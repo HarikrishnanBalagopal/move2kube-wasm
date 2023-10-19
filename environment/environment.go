@@ -17,14 +17,8 @@
 package environment
 
 import (
+	"bytes"
 	"fmt"
-	"github.com/konveyor/move2kube-wasm/common"
-	"github.com/konveyor/move2kube-wasm/common/deepcopy"
-	"github.com/konveyor/move2kube-wasm/common/pathconverters"
-	"github.com/konveyor/move2kube-wasm/types"
-	environmenttypes "github.com/konveyor/move2kube-wasm/types/environment"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cast"
 	"io/fs"
 	"net"
 	"os"
@@ -32,6 +26,16 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"text/template"
+
+	"github.com/konveyor/move2kube-wasm/common"
+	"github.com/konveyor/move2kube-wasm/common/deepcopy"
+	"github.com/konveyor/move2kube-wasm/common/pathconverters"
+	"github.com/konveyor/move2kube-wasm/types"
+	environmenttypes "github.com/konveyor/move2kube-wasm/types/environment"
+	transformertypes "github.com/konveyor/move2kube-wasm/types/transformer"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cast"
 )
 
 const (
@@ -69,11 +73,6 @@ type Environment struct {
 	active       bool
 }
 
-// GetEnvironmentSource returns the source path within the environment
-func (e *Environment) GetEnvironmentSource() string {
-	return e.Env.GetSource()
-}
-
 // EnvironmentInstance represents a actual instance of an environment which the Environment manages
 type EnvironmentInstance interface {
 	Reset() error
@@ -87,6 +86,73 @@ type EnvironmentInstance interface {
 	GetContext() string
 }
 
+// NewEnvironment creates a new environment
+func NewEnvironment(envInfo EnvInfo, grpcQAReceiver net.Addr) (env *Environment, err error) {
+	if !common.IsPresent(envInfo.EnvPlatformConfig.Platforms, runtime.GOOS) && envInfo.EnvPlatformConfig.Container.Image == "" {
+		return nil, fmt.Errorf("platform '%s' is not supported", runtime.GOOS)
+	}
+	containerInfo := envInfo.EnvPlatformConfig.Container
+	tempPath, err := os.MkdirTemp(common.TempPath, "environment-"+envInfo.Name+"-*")
+	if err != nil {
+		return env, fmt.Errorf("failed to create the temporary directory. Error: %w", err)
+	}
+	envInfo.TempPath = tempPath
+	env = &Environment{
+		EnvInfo:      envInfo,
+		Children:     []*Environment{},
+		TempPathsMap: map[string]string{},
+		active:       true,
+	}
+	if containerInfo.Image == "" {
+		env.Env, err = NewLocal(envInfo, grpcQAReceiver)
+		if err != nil {
+			return env, fmt.Errorf("failed to create the local environment. Error: %w", err)
+		}
+		return env, nil
+	}
+	envVariableName := common.MakeStringEnvNameCompliant(containerInfo.Image)
+	// TODO: replace below signalling mechanism with `prefersLocalExecutuion: true` in the transformer.yaml
+	// Check if image is part of the current environment.
+	// It will be set as environment variable with root as base path of move2kube
+	// When running in a process shared environment the environment variable will point to the base pid of the container for the image
+	envvars := os.Environ()
+	found := ""
+	for _, envvar := range envvars {
+		envvarpair := strings.SplitN(envvar, "=", 2)
+		if len(envvarpair) == 2 && envvarpair[0] == envVariableName {
+			found = envvarpair[1]
+			break
+		}
+	}
+	if found == "" {
+		logrus.Debugf("did not find the environment variable '%s'", envVariableName)
+	} else {
+		logrus.Debugf("found the environment variable '%s' with the value '%s'", envVariableName, found)
+		if _, err := cast.ToIntE(found); err != nil {
+			// the value is a string, probably the path to the transformer folder inside the image.
+			envInfo.Context = found
+			env.Env, err = NewLocal(envInfo, grpcQAReceiver)
+			if err == nil {
+				return env, nil
+			}
+			logrus.Errorf("failed to create the local environment. Falling back to peer container environment. Error: %q", err)
+		}
+	}
+	// TODO: Disabled for WASI
+	//if env.Env == nil {
+	//	env.Env, err = NewPeerContainer(envInfo, grpcQAReceiver, containerInfo, envInfo.SpawnContainers)
+	//	if err != nil {
+	//		return env, fmt.Errorf("failed to create the peer container environment. Error: %w", err)
+	//	}
+	//}
+	return env, nil
+}
+
+// AddChild adds a child to the environment
+func (e *Environment) AddChild(env *Environment) {
+	e.Children = append(e.Children, env)
+}
+
 // Reset resets an environment
 func (e *Environment) Reset() error {
 	if !e.active {
@@ -95,6 +161,14 @@ func (e *Environment) Reset() error {
 	}
 	e.CurrEnvOutputBasePath = ""
 	return e.Env.Reset()
+}
+
+// Exec executes an executable within the environment
+func (e *Environment) Exec(cmd environmenttypes.Command, envList []string) (stdout string, stderr string, exitcode int, err error) {
+	if !e.active {
+		return "", "", 0, ErrEnvironmentNotActive
+	}
+	return e.Env.Exec(cmd, envList)
 }
 
 // Destroy destroys all artifacts specific to the environment
@@ -223,65 +297,196 @@ func (e *Environment) Decode(obj interface{}) interface{} {
 	return dupobj
 }
 
-// NewEnvironment creates a new environment
-func NewEnvironment(envInfo EnvInfo, grpcQAReceiver net.Addr) (env *Environment, err error) {
-	if !common.IsPresent(envInfo.EnvPlatformConfig.Platforms, runtime.GOOS) && envInfo.EnvPlatformConfig.Container.Image == "" {
-		return nil, fmt.Errorf("platform '%s' is not supported", runtime.GOOS)
+// DownloadAndDecode downloads and decodes the data from the paths in the object
+func (e *Environment) DownloadAndDecode(obj interface{}, downloadSource bool) interface{} {
+	objCopy := deepcopy.DeepCopy(obj)
+	if !e.active {
+		logrus.Debug("environment not active. Process is terminating")
+		return objCopy
 	}
-	containerInfo := envInfo.EnvPlatformConfig.Container
-	tempPath, err := os.MkdirTemp(common.TempPath, "environment-"+envInfo.Name+"-*")
-	if err != nil {
-		return env, fmt.Errorf("failed to create the temporary directory. Error: %w", err)
-	}
-	envInfo.TempPath = tempPath
-	env = &Environment{
-		EnvInfo:      envInfo,
-		Children:     []*Environment{},
-		TempPathsMap: map[string]string{},
-		active:       true,
-	}
-	if containerInfo.Image == "" {
-		env.Env, err = NewLocal(envInfo, grpcQAReceiver)
-		if err != nil {
-			return env, fmt.Errorf("failed to create the local environment. Error: %w", err)
+	processPath := func(path string) (string, error) {
+		if path == "" {
+			return path, nil
 		}
-		return env, nil
-	}
-	envVariableName := common.MakeStringEnvNameCompliant(containerInfo.Image)
-	// TODO: replace below signalling mechanism with `prefersLocalExecutuion: true` in the transformer.yaml
-	// Check if image is part of the current environment.
-	// It will be set as environment variable with root as base path of move2kube
-	// When running in a process shared environment the environment variable will point to the base pid of the container for the image
-	envvars := os.Environ()
-	found := ""
-	for _, envvar := range envvars {
-		envvarpair := strings.SplitN(envvar, "=", 2)
-		if len(envvarpair) == 2 && envvarpair[0] == envVariableName {
-			found = envvarpair[1]
-			break
+		if tempPath, err := common.GetStringFromTemplate(path, e.TempPathsMap); err == nil && strings.Contains(path, templatePattern) {
+			path = tempPath
 		}
-	}
-	if found == "" {
-		logrus.Debugf("did not find the environment variable '%s'", envVariableName)
-	} else {
-		logrus.Debugf("found the environment variable '%s' with the value '%s'", envVariableName, found)
-		if _, err := cast.ToIntE(found); err != nil {
-			// the value is a string, probably the path to the transformer folder inside the image.
-			envInfo.Context = found
-			env.Env, err = NewLocal(envInfo, grpcQAReceiver)
-			if err == nil {
-				return env, nil
+		if !filepath.IsAbs(path) {
+			logrus.Debugf("the input path %q is not an absolute path", path)
+			return path, nil
+		}
+		if !downloadSource {
+			if common.IsParent(path, e.GetEnvironmentSource()) {
+				relPath, err := filepath.Rel(e.GetEnvironmentSource(), path)
+				if err != nil {
+					logrus.Errorf("Unable to convert source to rel path : %s", err)
+					return path, err
+				}
+				return filepath.Join(e.Source, relPath), nil
 			}
-			logrus.Errorf("failed to create the local environment. Falling back to peer container environment. Error: %q", err)
+		}
+		if common.IsParent(path, e.GetEnvironmentOutput()) {
+			relPath, err := filepath.Rel(e.GetEnvironmentOutput(), path)
+			if err != nil {
+				return path, fmt.Errorf("failed to make the path %s relative to the output directory %s . Error: %q", path, e.GetEnvironmentOutput(), err)
+			}
+			return relPath, nil
+		}
+		if _, err := e.Env.Stat(path); err != nil {
+			logrus.Debugf("Path [%s] does not exist", path)
+			return path, nil
+		}
+		if !common.IsParent(path, e.GetEnvironmentContext()) && !common.IsParent(filepath.Clean(path), common.TempPath) {
+			err := fmt.Errorf("path %s points to a unknown path. Removing the path", path)
+			logrus.Error(err)
+			return "", err
+		}
+		outpath, err := e.Env.Download(path)
+		if err != nil {
+			logrus.Errorf("Unable to copy data from path %s : %s", path, err)
+			return path, err
+		}
+		return outpath, nil
+	}
+	if err := pathconverters.ProcessPaths(objCopy, processPath); err != nil {
+		logrus.Errorf("failed to process all the paths for the object of type %T and value %+v . Error: %q", objCopy, objCopy, err)
+	}
+	return objCopy
+}
+
+// ProcessPathMappings post processes the paths in the path mappings
+func (e *Environment) ProcessPathMappings(pathMappings []transformertypes.PathMapping) []transformertypes.PathMapping {
+	dupPathMappings := deepcopy.DeepCopy(pathMappings).([]transformertypes.PathMapping)
+	if !e.active {
+		logrus.Debug("environment not active. Process is terminating")
+		return dupPathMappings
+	}
+
+	tempMappings := []transformertypes.PathMapping{}
+	for pmi, pm := range dupPathMappings {
+		if strings.EqualFold(string(pm.Type), string(transformertypes.PathTemplatePathMappingType)) {
+			// Process path template
+			methodMap := template.FuncMap{
+				"EnvPathType":  e.PathType,
+				"Rel":          e.Rel,
+				"SourceRel":    e.SourceRel,
+				"OutputRel":    e.OutputRel,
+				"TempRoot":     e.CreateTempRoot,
+				"FilePathBase": filepath.Base,
+			}
+			tpl, err := template.New("pathTpl").Funcs(methodMap).Parse(pm.SrcPath)
+			if err != nil {
+				logrus.Errorf("Error while parsing path template : %s", err)
+				continue
+			}
+			var path bytes.Buffer
+			err = tpl.Execute(&path, pm.TemplateConfig)
+			if err != nil {
+				logrus.Errorf("Error while processing path template : %s", err)
+				continue
+			}
+			pathStr := path.String()
+			logrus.Debugf("Output of environment template: %s\n", pathStr)
+			if filepath.IsAbs(pathStr) {
+				tempOutputPath, err := os.MkdirTemp(e.TempPath, "*")
+				if err != nil {
+					logrus.Errorf("Unable to create temp dir : %s", err)
+					continue
+				}
+				pathStr = filepath.Join(tempOutputPath, filepath.Base(pathStr))
+			}
+			pathTplName, err := common.GetStringFromTemplate("{{ .PathTemplateName }}", pm.TemplateConfig)
+			if err != nil {
+				logrus.Errorf("Unable to create temp dir : %s", err)
+				continue
+			}
+			e.TempPathsMap[pathTplName] = pathStr
+		} else {
+			if filepath.IsAbs(pm.SrcPath) && common.IsParent(pm.SrcPath, e.GetEnvironmentOutput()) {
+				var err error
+				dupPathMappings[pmi].SrcPath, err = e.Env.Download(pm.SrcPath)
+				if err != nil {
+					logrus.Errorf("Error while processing path mappings : %s", err)
+				}
+			}
+			if (strings.EqualFold(string(pm.Type), string(transformertypes.TemplatePathMappingType)) ||
+				strings.EqualFold(string(pm.Type), string(transformertypes.SpecialTemplatePathMappingType))) &&
+				(pm.SrcPath == "" || !filepath.IsAbs(pm.SrcPath)) {
+				dupPathMappings[pmi].SrcPath = filepath.Join(e.GetEnvironmentContext(), e.RelTemplatesDir, pm.SrcPath)
+			}
+			tempMappings = append(tempMappings, dupPathMappings[pmi])
 		}
 	}
-	//if env.Env == nil {
-	//	env.Env, err = NewPeerContainer(envInfo, grpcQAReceiver, containerInfo, envInfo.SpawnContainers)
-	//	if err != nil {
-	//		return env, fmt.Errorf("failed to create the peer container environment. Error: %w", err)
-	//	}
-	//}
-	return env, nil
+	dupPathMappings = tempMappings
+	return dupPathMappings
+}
+
+// SourceRel makes the path relative. Exposed to be used within path-mapping destination-path template.
+func (e *Environment) SourceRel(destPath string) (string, error) {
+	if !common.IsParent(destPath, e.GetEnvironmentSource()) {
+		return "", fmt.Errorf("%s not parent of source", destPath)
+	}
+	dp, err := filepath.Rel(e.GetEnvironmentSource(), destPath)
+	if err != nil {
+		logrus.Errorf("Unable to convert destination path relative to env source : %s", err)
+		return "", err
+	}
+	return dp, nil
+}
+
+// OutputRel makes the path relative. Exposed to be used within path-mapping destination-path template.
+func (e *Environment) OutputRel(destPath string) (string, error) {
+	if !common.IsParent(destPath, e.GetEnvironmentOutput()) {
+		return "", fmt.Errorf("%s not parent of output", destPath)
+	}
+	dp, err := filepath.Rel(e.GetEnvironmentOutput(), destPath)
+	if err != nil {
+		logrus.Errorf("Unable to convert destination path relative to env output : %s", err)
+		return "", err
+	}
+	return dp, nil
+}
+
+// Rel makes the path relative. Exposed to be used within path-mapping destination-path template.
+func (e *Environment) Rel(destPath string) (string, error) {
+	if r, err := e.SourceRel(destPath); err == nil {
+		return r, nil
+	} else if r, err = e.OutputRel(destPath); err == nil {
+		return r, nil
+	} else {
+		return "", fmt.Errorf("%s not parent of source or output", destPath)
+	}
+}
+
+// EnvPathType stores possible path types
+type EnvPathType string
+
+const (
+	// SourcePathType represents source path type
+	SourcePathType EnvPathType = "Source"
+	// OutputPathType represents output path type
+	OutputPathType EnvPathType = "Output"
+)
+
+// PathType makes the path relative. Exposed to be used within path-mapping destination-path template.
+func (e *Environment) PathType(destPath string) (EnvPathType, error) {
+	if _, err := e.SourceRel(destPath); err == nil {
+		return SourcePathType, nil
+	} else if _, err = e.OutputRel(destPath); err == nil {
+		return OutputPathType, nil
+	} else {
+		return "", fmt.Errorf("%s not parent of source or output", destPath)
+	}
+}
+
+// CreateTempRoot returns the "/" to indicate the temp-root creation. Exposed to be used within path-mapping destination-path template.
+func (e *Environment) CreateTempRoot() string {
+	return "/"
+}
+
+// GetEnvironmentSource returns the source path within the environment
+func (e *Environment) GetEnvironmentSource() string {
+	return e.Env.GetSource()
 }
 
 // GetEnvironmentContext returns the context path within the environment
@@ -292,4 +497,18 @@ func (e *Environment) GetEnvironmentContext() string {
 // GetEnvironmentOutput returns the output path within the environment
 func (e *Environment) GetEnvironmentOutput() string {
 	return e.CurrEnvOutputBasePath
+}
+
+// GetProjectName returns the project name
+func (e *Environment) GetProjectName() string {
+	return e.ProjectName
+}
+
+// IsPathValid returns if the project path is valid or not
+func (e *Environment) IsPathValid(path string) bool {
+	cleanpath := filepath.Clean(path)
+	if common.IsParent(cleanpath, common.TempPath) || common.IsParent(cleanpath, e.GetEnvironmentContext()) || common.IsParent(cleanpath, e.GetEnvironmentSource()) || common.IsParent(cleanpath, e.GetEnvironmentOutput()) {
+		return true
+	}
+	return false
 }
