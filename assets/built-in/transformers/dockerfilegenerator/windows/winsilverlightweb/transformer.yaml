@@ -1,0 +1,20 @@
+apiVersion: move2kube.konveyor.io/v1alpha1
+kind: Transformer
+metadata:
+  name: WinSLWebApp-Dockerfile
+  labels: 
+    move2kube.konveyor.io/task: containerization
+    move2kube.konveyor.io/built-in: true
+    move2kube.konveyor.io/default-selected: false
+spec:
+  class: "WinSilverLightWebAppDockerfileGenerator"
+  directoryDetect:
+    levels: -1
+  consumes:
+    Service: 
+      merge: false
+  produces:
+    Dockerfile:
+      disabled: false
+    DockerfileForService:
+      disabled: false
