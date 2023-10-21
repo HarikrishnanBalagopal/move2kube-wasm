@@ -6,21 +6,21 @@ go 1.21.0
 require github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 
 require (
-	github.com/Masterminds/semver/v3 v3.2.1
+	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/docker/docker v24.0.0+incompatible
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/openshift/api v0.0.0-20231019121755-0c5924392281
-	github.com/spf13/cast v1.4.1
+	github.com/openshift/api v0.0.0-20220112145620-704957ce4980
+	github.com/spf13/cast v1.5.1
 	github.com/spf13/cobra v1.7.0
-	github.com/spf13/viper v1.10.1
-	github.com/tektoncd/pipeline v0.52.1
+	github.com/spf13/viper v1.16.0
+	github.com/tektoncd/pipeline v0.31.1-0.20220112162203-fcca72712ce7
 	golang.org/x/crypto v0.12.0
 	golang.org/x/mod v0.10.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.28.2
-	k8s.io/apimachinery v0.28.2
+	k8s.io/api v0.26.5
+	k8s.io/apimachinery v0.26.5
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/kubernetes v1.23.1
 	knative.dev/serving v0.31.0
@@ -44,6 +44,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.10.2 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-kit/log v0.2.0 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
@@ -71,7 +72,6 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
@@ -82,7 +82,7 @@ require (
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc4 // indirect
-	github.com/pelletier/go-toml v1.9.5 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/pierrec/lz4/v4 v4.1.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
@@ -100,7 +100,6 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.25.0 // indirect
-	golang.org/x/exp v0.0.0-20230307190834-24139beb5833 // indirect
 	golang.org/x/net v0.14.0 // indirect
 	golang.org/x/oauth2 v0.11.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
