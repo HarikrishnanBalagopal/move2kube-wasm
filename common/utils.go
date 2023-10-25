@@ -22,6 +22,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"embed"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"github.com/Masterminds/sprig"
@@ -774,4 +775,16 @@ func MergeStringMaps(map1 map[string]string, map2 map[string]string) map[string]
 		map1[k] = v
 	}
 	return map1
+}
+
+// ReadXML reads an json into an object
+func ReadXML(file string, data interface{}) error {
+	xmlFile, err := os.ReadFile(file)
+	if err != nil {
+		return fmt.Errorf("failed to read the xml file at path '%s' . Error: %w", file, err)
+	}
+	if err := xml.Unmarshal(xmlFile, &data); err != nil {
+		return fmt.Errorf("failed to parse the xml file at path '%s' . Error: %w", file, err)
+	}
+	return nil
 }

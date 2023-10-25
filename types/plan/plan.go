@@ -71,12 +71,12 @@ func MergeServices(s1 map[string][]PlanArtifact, s2 map[string][]PlanArtifact) m
 }
 
 // MergeServicesT merges two service maps
-// func MergeServicesT(s1 map[string][]transformertypes.Artifact, s2 map[string][]transformertypes.Artifact) map[string][]transformertypes.Artifact {
-// 	if s1 == nil {
-// 		return s2
-// 	}
-// 	for s2n, s2t := range s2 {
-// 		s1[s2n] = append(s1[s2n], s2t...)
-// 	}
-// 	return s1
-// }
+func MergeServicesT(s1 map[string][]transformertypes.Artifact, s2 map[string][]transformertypes.Artifact) map[string][]transformertypes.Artifact {
+	if s1 == nil {
+		return s2
+	}
+	for s2n, s2t := range s2 {
+		s1[s2n] = append(s1[s2n], s2t...)
+	}
+	return s1
+}
