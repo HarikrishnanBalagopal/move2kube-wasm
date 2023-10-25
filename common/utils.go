@@ -905,3 +905,14 @@ func JsonifyMapValues(inputMap map[string]interface{}) map[string]interface{} {
 	}
 	return inputMap
 }
+
+// FindIndex returns the index of the first element that satisfies the condition.
+// It returns -1 if none of the elements satisfy the condition.
+func FindIndex[T interface{}](vs []T, condition func(T) bool) int {
+	for i, v := range vs {
+		if condition(v) {
+			return i
+		}
+	}
+	return -1
+}
