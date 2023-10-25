@@ -90,3 +90,8 @@ func GetContainerEngine(spawnContainers bool) (ContainerEngine, error) {
 	}
 	return workingEngine, nil
 }
+
+// IsDisabled returns whether the container environment is disabled
+func IsDisabled() bool {
+	return !enabled
+}
