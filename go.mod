@@ -8,6 +8,7 @@ require github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/Masterminds/sprig v2.22.0+incompatible
+	github.com/cloudfoundry-community/go-cfclient/v2 v2.0.0
 	github.com/docker/docker v24.0.0+incompatible
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mitchellh/mapstructure v1.5.0
@@ -30,6 +31,7 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
@@ -59,8 +61,11 @@ require (
 	github.com/ulikunitz/xz v0.5.9 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	golang.org/x/net v0.14.0 // indirect
+	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

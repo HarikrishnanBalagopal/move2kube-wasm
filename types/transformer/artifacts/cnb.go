@@ -17,28 +17,8 @@
 package artifacts
 
 import (
-	"reflect"
-
-	"github.com/konveyor/move2kube-wasm/common"
-	collecttypes "github.com/konveyor/move2kube-wasm/types/collection"
 	transformertypes "github.com/konveyor/move2kube-wasm/types/transformer"
 )
 
-var (
-	// ConfigTypes stores the various config types
-	ConfigTypes map[string]reflect.Type
-)
-
-func init() {
-	configObjs := []transformertypes.Config{
-		//TODO: WASI
-		//new(ir.IR),
-		new(NewImages),
-		new(MavenConfig),
-		new(GradleConfig),
-		new(SpringBootConfig),
-		new(ContainerizationOptionsConfig),
-		new(collecttypes.ClusterMetadata),
-	}
-	ConfigTypes = common.GetTypesMap(configObjs)
-}
+// CNBDetectedServiceArtifactType is the name of the CNB artifact type
+const CNBDetectedServiceArtifactType transformertypes.ArtifactType = "CNBDetectedService"

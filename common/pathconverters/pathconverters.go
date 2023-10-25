@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/konveyor/move2kube-wasm/common"
 	"github.com/sirupsen/logrus"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -164,6 +165,25 @@ func process(value reflect.Value, ctx context) error {
 		logrus.Debugf("default. Actual kind: %s", value.Kind())
 	}
 	return nil
+}
+
+// MakePlanPathsAbsolute converts all paths in a plan to absolute path from relative path
+func MakePlanPathsAbsolute(obj interface{}, sourcePath, assetsPath string) (err error) {
+	function := func(relPath string) (string, error) {
+		if relPath == "" {
+			return relPath, nil
+		}
+		if filepath.IsAbs(relPath) {
+			logrus.Debugf("The input path %q is not an relative path. Cannot make it absolute.", relPath)
+			return relPath, nil
+		}
+		pathParts := strings.Split(relPath, string(os.PathSeparator))
+		if len(pathParts) > 0 && pathParts[0] == common.AssetsDir {
+			return filepath.Join(assetsPath, relPath), nil
+		}
+		return filepath.Join(sourcePath, relPath), nil
+	}
+	return ProcessPaths(obj, function)
 }
 
 // ChangePaths changes paths which are based out of one root to another root
