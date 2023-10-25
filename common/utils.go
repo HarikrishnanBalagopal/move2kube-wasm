@@ -31,6 +31,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"reflect"
 	"text/template"
@@ -787,4 +789,28 @@ func ReadXML(file string, data interface{}) error {
 		return fmt.Errorf("failed to parse the xml file at path '%s' . Error: %w", file, err)
 	}
 	return nil
+}
+
+// IsHTTPURL checks if a string represents an HTTP or HTTPS URL using regular expressions.
+func IsHTTPURL(str string) bool {
+	pattern := `^(http|https)://`
+
+	regex := regexp.MustCompile(pattern)
+
+	return regex.MatchString(str)
+}
+
+// ConvertStringSelectorsToSelectors converts selector string to selector object
+func ConvertStringSelectorsToSelectors(transformerSelector string) (labels.Selector, error) {
+	transformerSelectorObj, err := metav1.ParseToLabelSelector(transformerSelector)
+	if err != nil {
+		logrus.Errorf("Unable to parse the transformer selector string : %s", err)
+		return labels.Everything(), err
+	}
+	lblSelector, err := metav1.LabelSelectorAsSelector(transformerSelectorObj)
+	if err != nil {
+		logrus.Errorf("Unable to convert label selector to selector : %s", err)
+		return labels.Everything(), err
+	}
+	return lblSelector, err
 }
