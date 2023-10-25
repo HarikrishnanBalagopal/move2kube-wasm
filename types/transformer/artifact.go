@@ -16,7 +16,12 @@
 
 package transformer
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"fmt"
+
+	"github.com/konveyor/move2kube-wasm/common"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // ArtifactType is used to store the artifact type
 type ArtifactType string
@@ -35,4 +40,16 @@ type Artifact struct {
 
 	Paths   map[PathType][]string      `yaml:"paths,omitempty" json:"paths,omitempty" m2kpath:"normal"`
 	Configs map[ConfigType]interface{} `yaml:"configs,omitempty" json:"configs,omitempty"` // Could be IR or template config or any custom configuration
+}
+
+// GetConfig returns the config that has a particular config name
+func (a *Artifact) GetConfig(configName ConfigType, obj interface{}) (err error) {
+	cConfig, ok := a.Configs[configName]
+	if !ok {
+		return fmt.Errorf("did not find a config with the name '%s' in artifact: %+v . Ignoring", configName, a)
+	}
+	if err := common.GetObjFromInterface(cConfig, obj); err != nil {
+		return fmt.Errorf("failed to load the config: %+v into the object of type '%T' . Error: %w", cConfig, obj, err)
+	}
+	return nil
 }

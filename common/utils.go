@@ -1,33 +1,39 @@
 /*
- *  Copyright IBM Corporation 2021, 2022
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+*  Copyright IBM Corporation 2021, 2022
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*        http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
  */
 
 package common
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"crypto/sha256"
 	"embed"
+	"errors"
 	"fmt"
+	"github.com/Masterminds/sprig"
+	"github.com/docker/docker/pkg/ioutils"
 	"github.com/konveyor/move2kube-wasm/types"
 	"github.com/mitchellh/mapstructure"
+	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"reflect"
+	"text/template"
 
-	//"github.com/go-git/go-git/v5"
 	"io"
 	"os"
 	"path/filepath"
@@ -35,7 +41,6 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 )
 
 // ObjectToYamlBytes encodes an object to yaml
@@ -223,92 +228,6 @@ func FindCommonDirectory(paths []string) string {
 	}
 	return commonDir
 }
-
-// GatherGitInfo tries to find the git repo for the path if one exists.
-//func GatherGitInfo(path string) (repoName, repoDir, repoHostName, repoURL, repoBranch string, err error) {
-//	if finfo, err := os.Stat(path); err != nil {
-//		return "", "", "", "", "", fmt.Errorf("failed to stat the path '%s' . Error %w", path, err)
-//	} else if !finfo.IsDir() {
-//		pathDir := filepath.Dir(path)
-//		logrus.Debugf("The path '%s' is not a directory. Using the path '%s' instead.", path, pathDir)
-//		path = pathDir
-//	}
-//	repo, err := git.PlainOpenWithOptions(path, &git.PlainOpenOptions{DetectDotGit: true})
-//	if err != nil {
-//		return "", "", "", "", "", fmt.Errorf("failed to open the path '%s' as a git repo. Error: %w", path, err)
-//	}
-//	workTree, err := repo.Worktree()
-//	if err != nil {
-//		return "", "", "", "", "", fmt.Errorf("failed to get the repo working tree/directory. Error: %w", err)
-//	}
-//	repoDir = workTree.Filesystem.Root()
-//	ref, err := repo.Head()
-//	if err != nil {
-//		return "", "", "", "", "", fmt.Errorf("failed to get the current branch. Error: %w", err)
-//	}
-//	logrus.Debugf("current branch/tag: %#v", ref)
-//	repoBranch = filepath.Base(string(ref.Name()))
-//	remotes, err := repo.Remotes()
-//	if err != nil || len(remotes) == 0 {
-//		logrus.Debugf("failed to find any remote repo urls for the repo at path '%s' . Error: %q", path, err)
-//		logrus.Debugf("git no remotes case - repoName '%s', repoDir '%s', repoHostName '%s', repoURL '%s', repoBranch '%s'", repoName, repoDir, repoHostName, repoURL, repoBranch)
-//		return repoName, repoDir, repoHostName, repoURL, repoBranch, nil
-//	}
-//	var preferredRemote *git.Remote
-//	if preferredRemote = getGitRemoteByName(remotes, "upstream"); preferredRemote == nil {
-//		if preferredRemote = getGitRemoteByName(remotes, "origin"); preferredRemote == nil {
-//			preferredRemote = remotes[0]
-//		}
-//	}
-//	if len(preferredRemote.Config().URLs) == 0 {
-//		err = fmt.Errorf("unable to get origins")
-//		logrus.Debugf("%s", err)
-//	}
-//	u := preferredRemote.Config().URLs[0]
-//	repoURL = u
-//	if strings.HasPrefix(u, "git@") {
-//		// Example: git@github.com:konveyor/move2kube.git
-//		withoutGitAt := strings.TrimPrefix(u, "git@")
-//		idx := strings.Index(withoutGitAt, ":")
-//		if idx < 0 {
-//			return "", "", "", "", "", fmt.Errorf("failed to parse the remote host url '%s' as a git ssh url. Error: %w", u, err)
-//		}
-//		domain := withoutGitAt[:idx]
-//		rest := withoutGitAt[idx+1:]
-//		newUrl := "https://" + domain + "/" + rest
-//		logrus.Debugf("final parsed git ssh url to normal url: '%s'", newUrl)
-//		giturl, err := url.Parse(newUrl)
-//		if err != nil {
-//			return "", "", "", "", "", fmt.Errorf("failed to parse the remote host url '%s' . Error: %w", newUrl, err)
-//		}
-//		logrus.Debugf("parsed ssh case - giturl: %#v", giturl)
-//		repoHostName = giturl.Host
-//		repoName = filepath.Base(giturl.Path)
-//		repoName = strings.TrimSuffix(repoName, filepath.Ext(repoName))
-//		logrus.Debugf("git ssh case - repoName '%s', repoDir '%s', repoHostName '%s', repoURL '%s', repoBranch '%s'", repoName, repoDir, repoHostName, repoURL, repoBranch)
-//		return repoName, repoDir, repoHostName, repoURL, repoBranch, nil
-//	}
-//
-//	giturl, err := url.Parse(u)
-//	if err != nil {
-//		return "", "", "", "", "", fmt.Errorf("failed to parse the remote host url '%s' . Error: %w", u, err)
-//	}
-//	logrus.Debugf("parsed normal case - giturl: %#v", giturl)
-//	repoHostName = giturl.Host
-//	repoName = filepath.Base(giturl.Path)
-//	repoName = strings.TrimSuffix(repoName, filepath.Ext(repoName))
-//	logrus.Debugf("git normal case - repoName '%s', repoDir '%s', repoHostName '%s', repoURL '%s', repoBranch '%s'", repoName, repoDir, repoHostName, repoURL, repoBranch)
-//	return repoName, repoDir, repoHostName, repoURL, repoBranch, nil
-//}
-//
-//func getGitRemoteByName(remotes []*git.Remote, remoteName string) *git.Remote {
-//	for _, r := range remotes {
-//		if r.Config().Name == remoteName {
-//			return r
-//		}
-//	}
-//	return nil
-//}
 
 // NormalizeForMetadataName converts the string to be compatible for service name
 func NormalizeForMetadataName(metadataName string) string {
@@ -656,4 +575,203 @@ func removeDollarPrefixFromHiddenDir(name string) string {
 		name = name[1:]
 	}
 	return name
+}
+
+// AppendIfNotPresent checks if a value is present in a slice and if not appends it to the slice
+func AppendIfNotPresent[C comparable](list []C, values ...C) []C {
+	for _, value := range values {
+		if !IsPresent(list, value) {
+			list = append(list, value)
+		}
+	}
+	return list
+}
+
+// MergeSlices merges two slices
+func MergeSlices[C comparable](slice1 []C, slice2 []C) []C {
+	return AppendIfNotPresent(slice1, slice2...)
+}
+
+// GetStringFromTemplate returns string for a template
+func GetStringFromTemplate(tpl string, config interface{}) (string, error) {
+	var tplbuffer bytes.Buffer
+	packageTemplate, err := template.New("").Funcs(sprig.TxtFuncMap()).Parse(tpl)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse the template. Error: %w", err)
+	}
+	if err := packageTemplate.Execute(&tplbuffer, config); err != nil {
+		return "", fmt.Errorf("failed to transform the template to string using the data. Error: %w . Data: %+v Template: '%s'", err, config, tpl)
+	}
+	return tplbuffer.String(), nil
+}
+
+// CreateTarArchiveGZipStringWrapper can be used to archive a set of files and compression using gzip and return tar archive string
+func CreateTarArchiveGZipStringWrapper(srcPath string) string {
+	archivedData, err := createTarArchive(srcPath, GZipCompression)
+	if err != nil {
+		logrus.Errorf("failed to create archive string with the given compression mode %s : %s", NoCompression, err)
+	}
+
+	return archivedData.String()
+
+}
+
+// CreateTarArchiveNoCompressionStringWrapper can be used to archive a set of files and compression without compression and return tar archive string
+func CreateTarArchiveNoCompressionStringWrapper(srcPath string) string {
+	archivedData, err := createTarArchive(srcPath, NoCompression)
+	if err != nil {
+		logrus.Errorf("failed to create archive string with the given compression mode %s : %s", NoCompression, err)
+	}
+
+	return archivedData.String()
+
+}
+
+func createTarArchive(srcPath string, compressionType CompressionType) (*bytes.Buffer, error) {
+	reader := ReadFilesAsTar(srcPath, "", compressionType)
+	if reader == nil {
+		return nil, fmt.Errorf("error during create tar archive from '%s'", srcPath)
+	}
+
+	defer reader.Close()
+	buf := new(bytes.Buffer)
+	_, err := io.Copy(buf, reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to copy bytes to buffer : %s", err)
+	}
+
+	return buf, nil
+
+}
+
+// ReadFilesAsTar creates the Tar with given compression format and return ReadCloser interface
+func ReadFilesAsTar(srcPath, basePath string, compressionType CompressionType) io.ReadCloser {
+	errChan := make(chan error)
+	pr, pw := io.Pipe()
+	go func() {
+		err := writeToTar(pw, srcPath, basePath, compressionType)
+		errChan <- err
+	}()
+	closed := false
+	return ioutils.NewReadCloserWrapper(pr, func() error {
+		if closed {
+			return errors.New("reader already closed")
+		}
+		perr := pr.Close()
+		if err := <-errChan; err != nil {
+			closed = true
+			if perr == nil {
+				return err
+			}
+			return fmt.Errorf("%s - %s", perr, err)
+		}
+		closed = true
+		return nil
+	})
+}
+
+func writeToTar(w *io.PipeWriter, srcPath, basePath string, compressionType CompressionType) error {
+	defer w.Close()
+	var tw *tar.Writer
+	switch compressionType {
+	case GZipCompression:
+		// create writer for gzip
+		gzipWriter := gzip.NewWriter(w)
+		defer gzipWriter.Close()
+		tw = tar.NewWriter(gzipWriter)
+	default:
+		tw = tar.NewWriter(w)
+	}
+	defer tw.Close()
+	f, err := os.Stat(srcPath)
+	if err != nil {
+		logrus.Debugf("failed to stat the path : %s", err)
+		return err
+	}
+	mode := f.Mode()
+	return filepath.Walk(srcPath, func(file string, fi os.FileInfo, err error) error {
+		if err != nil {
+			logrus.Debugf("Error walking folder to copy to container : %s", err)
+			return err
+		}
+		if fi.Mode()&os.ModeSocket != 0 {
+			return nil
+		}
+		var header *tar.Header
+		if fi.Mode()&os.ModeSymlink != 0 {
+			target, err := os.Readlink(file)
+			if err != nil {
+				return err
+			}
+			// Ensure that symlinks have Linux link names
+			header, err = tar.FileInfoHeader(fi, filepath.ToSlash(target))
+			if err != nil {
+				return err
+			}
+		} else {
+			header, err = tar.FileInfoHeader(fi, fi.Name())
+			if err != nil {
+				return err
+			}
+		}
+		if mode.IsDir() {
+			relPath, err := filepath.Rel(srcPath, file)
+			if err != nil {
+				logrus.Debugf("Error walking folder to copy to container : %s", err)
+				return err
+			} else if relPath == "." {
+				return nil
+			}
+			header.Name = filepath.ToSlash(filepath.Join(basePath, relPath))
+		} else {
+			header.Name = fi.Name()
+		}
+		if err := tw.WriteHeader(header); err != nil {
+			logrus.Debugf("Error walking folder to copy to container : %s", err)
+			return err
+		}
+		if fi.Mode().IsRegular() {
+			f, err := os.Open(file)
+			if err != nil {
+				logrus.Debugf("Error walking folder to copy to container : %s", err)
+				return err
+			}
+			defer f.Close()
+			if _, err := io.Copy(tw, f); err != nil {
+				logrus.Debugf("Error walking folder to copy to container : %s", err)
+				return err
+			}
+		}
+		return nil
+	})
+
+}
+
+// MakeStringContainerImageNameCompliant makes the string into a valid image name.
+func MakeStringContainerImageNameCompliant(s string) string {
+	if strings.TrimSpace(s) == "" {
+		logrus.Errorf("Empty string given to create container name")
+		return s
+	}
+	name := strings.ToLower(s)
+	name = regexp.MustCompile(`[^a-z0-9-.:]`).ReplaceAllLiteralString(name, "-")
+	start, end := name[0], name[len(name)-1]
+	if start == '-' || start == '.' || end == '-' || end == '.' {
+		logrus.Debugf("The first and/or last characters of the string %q are not alphanumeric.", s)
+	}
+	return name
+}
+
+// MergeStringMaps merges two string maps
+func MergeStringMaps(map1 map[string]string, map2 map[string]string) map[string]string {
+	if map1 == nil {
+		return map2
+	}
+	if map2 == nil {
+		return map1
+	}
+	for k, v := range map2 {
+		map1[k] = v
+	}
+	return map1
 }
