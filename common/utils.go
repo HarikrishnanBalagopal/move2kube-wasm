@@ -916,3 +916,8 @@ func FindIndex[T interface{}](vs []T, condition func(T) bool) int {
 	}
 	return -1
 }
+
+// JoinQASubKeys joins sub keys into a valid QA key using the proper delimiter
+func JoinQASubKeys(xs ...string) string {
+	return strings.Join(xs, Delim)
+}

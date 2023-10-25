@@ -74,6 +74,7 @@ func nameServices(projectName string, inputServicesMap map[string][]plantypes.Pl
 	logrus.Debug("Find if base dir is a git repo, and has only one service or many services")
 	repoNameToDirs := map[string][]string{} // [repoName][]repoDir
 	repoDirToName := map[string]string{}
+	//TODO: WASI
 	//for serviceDir := range serviceDirToUnnamedServices {
 	//	repoName, _, _, repoURL, _, err := common.GatherGitInfo(serviceDir)
 	//	if err != nil {
