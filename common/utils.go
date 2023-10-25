@@ -22,6 +22,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"embed"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -30,11 +31,13 @@ import (
 	"github.com/konveyor/move2kube-wasm/types"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/yaml.v3"
+	"hash/crc64"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"reflect"
+	"strconv"
 	"text/template"
 
 	"io"
@@ -813,4 +816,92 @@ func ConvertStringSelectorsToSelectors(transformerSelector string) (labels.Selec
 		return labels.Everything(), err
 	}
 	return lblSelector, err
+}
+
+// NormalizeForFilename normalizes a string to only filename valid characters
+func NormalizeForFilename(name string) string {
+	processedString := MakeFileNameCompliant(name)
+	//TODO: Make it more robust by taking some characters from start and also from end
+	const maxPrefixLength = 200
+	if len(processedString) > maxPrefixLength {
+		processedString = processedString[0:maxPrefixLength]
+	}
+	crc64Table := crc64.MakeTable(0xC96C5795D7870F42)
+	crc64Int := crc64.Checksum([]byte(name), crc64Table)
+	return processedString + "-" + strconv.FormatUint(crc64Int, 16)
+}
+
+// MakeFileNameCompliant returns a DNS-1123 standard string
+// Motivated by https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+// Also see page 1 "ASSUMPTIONS" heading of https://tools.ietf.org/html/rfc952
+// Also see page 13 of https://tools.ietf.org/html/rfc1123#page-13
+func MakeFileNameCompliant(name string) string {
+	if name == "" {
+		logrus.Error("The file name is empty.")
+		return ""
+	}
+	baseName := filepath.Base(name)
+	invalidChars := regexp.MustCompile("[^a-zA-Z0-9-.]+")
+	processedName := invalidChars.ReplaceAllLiteralString(baseName, "-")
+	if len(processedName) > 63 {
+		logrus.Debugf("Warning: The processed name %q is longer than 63 characters long.", processedName)
+	}
+	first := processedName[0]
+	last := processedName[len(processedName)-1]
+	if first == '-' || first == '.' || last == '-' || last == '.' {
+		logrus.Debugf("Warning: The first and/or last characters of the name %q are not alphanumeric.", processedName)
+	}
+	return processedName
+}
+
+// ReadYaml reads an yaml into an object
+func ReadYaml(file string, data interface{}) error {
+	yamlFile, err := os.ReadFile(file)
+	if err != nil {
+		logrus.Debugf("Error in reading yaml file %s: %s.", file, err)
+		return err
+	}
+	err = yaml.Unmarshal(yamlFile, data)
+	if err != nil {
+		logrus.Debugf("Error in unmarshalling yaml file %s: %s.", file, err)
+		return err
+	}
+	rv := reflect.ValueOf(data)
+	if rv.Kind() == reflect.Ptr && rv.Elem().Kind() == reflect.Struct {
+		rv = rv.Elem()
+		fv := rv.FieldByName("APIVersion")
+		if fv.IsValid() {
+			if fv.Kind() == reflect.String {
+				val := strings.TrimSpace(fv.String())
+				if strings.HasPrefix(val, types.SchemeGroupVersion.Group) && !strings.HasSuffix(val, types.SchemeGroupVersion.Version) {
+					logrus.Warnf("The application file (%s) was generated using a different version than (%s)", val, types.SchemeGroupVersion.String())
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// JsonifyMapValues converts the map values to json
+func JsonifyMapValues(inputMap map[string]interface{}) map[string]interface{} {
+	for key, value := range inputMap {
+		if value == nil {
+			inputMap[key] = ""
+			continue
+		}
+		if val, ok := value.(string); ok {
+			inputMap[key] = val
+			continue
+		}
+		var b bytes.Buffer
+		encoder := json.NewEncoder(&b)
+		if err := encoder.Encode(value); err != nil {
+			logrus.Error("Unable to unmarshal data to json while converting map interfaces to string")
+			continue
+		}
+		strValue := b.String()
+		strValue = strings.TrimSpace(strValue)
+		inputMap[key] = strValue
+	}
+	return inputMap
 }
