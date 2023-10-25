@@ -10,6 +10,7 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/cloudfoundry-community/go-cfclient/v2 v2.0.0
 	github.com/docker/docker v24.0.0+incompatible
+	github.com/gorilla/mux v1.8.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/spf13/cast v1.5.1
