@@ -27,7 +27,6 @@ import (
 	"github.com/konveyor/move2kube-wasm/common"
 	"github.com/konveyor/move2kube-wasm/environment"
 	"github.com/konveyor/move2kube-wasm/types"
-	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
 	//"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	transformertypes "github.com/konveyor/move2kube-wasm/types/transformer"
 	"github.com/konveyor/move2kube-wasm/types/transformer/artifacts"
@@ -170,12 +169,12 @@ func (t *GolangDockerfileGenerator) Transform(newArtifacts []transformertypes.Ar
 		if imageName.ImageName == "" {
 			imageName.ImageName = common.MakeStringContainerImageNameCompliant(serviceConfig.ServiceName)
 		}
-		ir := irtypes.IR{}
-		irPresent := true
-		if err := a.GetConfig(irtypes.IRConfigType, &ir); err != nil {
-			irPresent = false
-			logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
-		}
+		//ir := irtypes.IR{}
+		//irPresent := true
+		//if err := a.GetConfig(irtypes.IRConfigType, &ir); err != nil {
+		//	irPresent = false
+		//	logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
+		//}
 		data, err := os.ReadFile(a.Paths[GolangModFilePathType][0])
 		if err != nil {
 			logrus.Errorf("Error while reading the go.mod file : %s", err)
@@ -206,15 +205,15 @@ func (t *GolangDockerfileGenerator) Transform(newArtifacts []transformertypes.Ar
 			golangImageTag = golangVersionToImageTagMapping[t.GolangConfig.DefaultGoVersion]
 			logrus.Warnf("Could not find a matching Golang version in the mapping. Selecting image tag %s corresponding to the default Golang version %s", golangImageTag, t.GolangConfig.DefaultGoVersion)
 		}
-		detectedPorts := ir.GetAllServicePorts()
-		if len(detectedPorts) == 0 {
-			detectedPorts = append(detectedPorts, common.DefaultServicePort)
-		}
+		//detectedPorts := ir.GetAllServicePorts()
+		//if len(detectedPorts) == 0 {
+		//	detectedPorts = append(detectedPorts, common.DefaultServicePort)
+		//}
 		// TODO: WASI
 		//detectedPorts = commonqa.GetPortsForService(detectedPorts, `"`+a.Name+`"`)
 		golangConfig := GolangTemplateConfig{
-			AppName:        a.Name,
-			Ports:          detectedPorts,
+			AppName: a.Name,
+			//Ports:          detectedPorts,
 			GolangImageTag: golangImageTag,
 		}
 
@@ -247,9 +246,9 @@ func (t *GolangDockerfileGenerator) Transform(newArtifacts []transformertypes.Ar
 				artifacts.ImageNameConfigType: imageName,
 			},
 		}
-		if irPresent {
-			dfs.Configs[irtypes.IRConfigType] = ir
-		}
+		//if irPresent {
+		//	dfs.Configs[irtypes.IRConfigType] = ir
+		//}
 		artifactsCreated = append(artifactsCreated, p, dfs)
 	}
 	return pathMappings, artifactsCreated, nil

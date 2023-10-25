@@ -21,7 +21,6 @@ import (
 
 	"github.com/konveyor/move2kube-wasm/common"
 	collecttypes "github.com/konveyor/move2kube-wasm/types/collection"
-	"github.com/konveyor/move2kube-wasm/types/ir"
 	transformertypes "github.com/konveyor/move2kube-wasm/types/transformer"
 )
 
@@ -32,7 +31,7 @@ var (
 
 func init() {
 	configObjs := []transformertypes.Config{
-		new(ir.IR),
+		//new(ir.IR),
 		new(NewImages),
 		new(MavenConfig),
 		new(GradleConfig),
