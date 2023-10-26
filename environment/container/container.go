@@ -19,7 +19,7 @@ package container
 import (
 	"errors"
 	"fmt"
-	dockertypes "github.com/docker/docker/api/types"
+	//dockertypes "github.com/docker/docker/api/types"
 	environmenttypes "github.com/konveyor/move2kube-wasm/types/environment"
 	"github.com/sirupsen/logrus"
 	"io/fs"
@@ -38,7 +38,9 @@ type ContainerEngine interface {
 	// RunCmdInContainer runs a container
 	RunCmdInContainer(image string, cmd environmenttypes.Command, workingdir string, env []string) (stdout, stderr string, exitcode int, err error)
 	// InspectImage gets Inspect output for a container
-	InspectImage(image string) (dockertypes.ImageInspect, error)
+	//TODO: WASI
+
+	//InspectImage(image string) (dockertypes.ImageInspect, error)
 	// TODO: Change paths from map to array
 	CopyDirsIntoImage(image, newImageName string, paths map[string]string) (err error)
 	CopyDirsIntoContainer(containerID string, paths map[string]string) (err error)

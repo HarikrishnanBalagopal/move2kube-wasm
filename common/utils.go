@@ -30,6 +30,7 @@ import (
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/konveyor/move2kube-wasm/types"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/text/transform"
 	"gopkg.in/yaml.v3"
 	"hash/crc64"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -47,6 +48,7 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	encodingunicode "golang.org/x/text/encoding/unicode"
 )
 
 // ObjectToYamlBytes encodes an object to yaml
@@ -920,4 +922,151 @@ func FindIndex[T interface{}](vs []T, condition func(T) bool) int {
 // JoinQASubKeys joins sub keys into a valid QA key using the proper delimiter
 func JoinQASubKeys(xs ...string) string {
 	return strings.Join(xs, Delim)
+}
+
+// StripQuotes strips a single layer of double or single quotes from the left and right ends
+// Example: "github.com" -> github.com
+// Example: 'github.com' -> github.com
+// Example: "'github.com'" -> 'github.com'
+func StripQuotes(s string) string {
+	if strings.HasPrefix(s, `"`) && strings.HasSuffix(s, `"`) {
+		return strings.TrimSuffix(strings.TrimPrefix(s, `"`), `"`)
+	}
+	if strings.HasPrefix(s, `'`) && strings.HasSuffix(s, `'`) {
+		return strings.TrimSuffix(strings.TrimPrefix(s, `'`), `'`)
+	}
+	return s
+}
+
+// GetFilesInCurrentDirectory returns the name of the file present in the current directory which matches the pattern
+func GetFilesInCurrentDirectory(path string, fileNames, fileNameRegexes []string) (matchedFilePaths []string, err error) {
+	matchedFilePaths = []string{}
+	currFileNames := []string{}
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat the directory at path %s . Error: %q", path, err)
+	}
+	if !info.IsDir() {
+		logrus.Warnf("the provided path %s is not a directory. info: %+v", path, info)
+		currFileNames = append(currFileNames, path)
+	} else {
+		dirHandle, err := os.Open(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open the directory %s . Error: %q", path, err)
+		}
+		defer dirHandle.Close()
+		currFileNames, err = dirHandle.Readdirnames(0) // 0 to read all files and folders
+		if err != nil {
+			return nil, fmt.Errorf("failed to get the list of files in the directory %s . Error: %q", path, err)
+		}
+	}
+	compiledNameRegexes := []*regexp.Regexp{}
+	for _, nameRegex := range fileNameRegexes {
+		compiledNameRegex, err := regexp.Compile(nameRegex)
+		if err != nil {
+			logrus.Errorf("skipping because the regular expression `%s` failed to compile. Error: %q", nameRegex, err)
+			continue
+		}
+		compiledNameRegexes = append(compiledNameRegexes, compiledNameRegex)
+	}
+	for _, currFileName := range currFileNames {
+		for _, fileName := range fileNames {
+			if fileName == currFileName {
+				matchedFilePaths = append(matchedFilePaths, filepath.Join(path, currFileName))
+				break
+			}
+		}
+		for _, compiledNameRegex := range compiledNameRegexes {
+			if compiledNameRegex.MatchString(currFileName) {
+				matchedFilePaths = append(matchedFilePaths, filepath.Join(path, currFileName))
+				break
+			}
+		}
+	}
+	return matchedFilePaths, nil
+}
+
+// GetFilesByExtInCurrDir returns the files present in current directory which have one of the specified extensions
+func GetFilesByExtInCurrDir(dir string, exts []string) ([]string, error) {
+	var files []string
+	info, err := os.Stat(dir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat the directory '%s' . Error: %w", dir, err)
+	}
+	if !info.IsDir() {
+		logrus.Warnf("the provided path '%s' is not a directory", dir)
+		fext := filepath.Ext(dir)
+		for _, ext := range exts {
+			if fext == ext {
+				return []string{dir}, nil
+			}
+		}
+		return nil, nil
+	}
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the directory '%s' . Error: %w", dir, err)
+	}
+	for _, de := range dirEntries {
+		if de.IsDir() {
+			continue
+		}
+		fext := filepath.Ext(de.Name())
+		for _, ext := range exts {
+			if fext == ext {
+				files = append(files, filepath.Join(dir, de.Name()))
+				break
+			}
+		}
+	}
+	return files, nil
+}
+
+// ConvertUtf8AndUtf16ToUtf8 converts UTF-8 and UTF-16 encoded text (with or without a BOM) into UTF-8 encoded text (without a BOM)
+func ConvertUtf8AndUtf16ToUtf8(original []byte) ([]byte, error) {
+	utf8and16 := encodingunicode.BOMOverride(encodingunicode.UTF8.NewDecoder())
+	buf := &bytes.Buffer{}
+	w1 := transform.NewWriter(buf, utf8and16)
+	if _, err := w1.Write(original); err != nil {
+		return nil, fmt.Errorf("failed to transform the bytes to utf-8. Error: %w\nOriginal bytes: %+v", err, original)
+	}
+	err := w1.Close()
+	return buf.Bytes(), err
+}
+
+// ReadJSON reads an json into an object
+func ReadJSON(path string, data interface{}) error {
+	jsonBytes, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("failed to read the json file at path '%s' . Error: %w", path, err)
+	}
+	jsonUtf8Bytes, err := ConvertUtf8AndUtf16ToUtf8(jsonBytes)
+	if err != nil {
+		return fmt.Errorf("failed to convert the json file at path '%s' to utf-8. Error: %w", path, err)
+	}
+	if err := json.Unmarshal(jsonUtf8Bytes, &data); err != nil {
+		return fmt.Errorf("failed to parse the json file at path '%s' . Error: %w\nBytes before transform: %+v\nBytes after transform: %+v", path, err, jsonBytes, jsonUtf8Bytes)
+	}
+	return nil
+}
+
+// Filter returns the elements that satisfy the condition.
+// It returns nil if none of the elements satisfy the condition.
+func Filter[T comparable](vs []T, condition func(T) bool) []T {
+	var ws []T
+	for _, v := range vs {
+		if condition(v) {
+			ws = append(ws, v)
+		}
+	}
+	return ws
+}
+
+// Map applies the given function over all the elements and returns a new slice with the results.
+func Map[T1 interface{}, T2 interface{}](vs []T1, f func(T1) T2) []T2 {
+	var ws []T2
+	for _, v := range vs {
+		ws = append(ws, f(v))
+	}
+	return ws
 }
