@@ -32,6 +32,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.26.5
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
+	k8s.io/kubernetes v1.23.1
+    knative.dev/serving v0.31.0
+	github.com/openshift/api v0.0.0-20220112145620-704957ce4980
+	github.com/tektoncd/pipeline v0.31.1-0.20220112162203-fcca72712ce7
 )
 
 require (

@@ -16,50 +16,49 @@
 
 package ir
 
-//
-//// EnhancedIR is IR with extra data specific to API resource sets
-//type EnhancedIR struct {
-//	IR
-//	Roles           []Role
-//	RoleBindings    []RoleBinding
-//	ServiceAccounts []ServiceAccount
-//	BuildConfigs    []BuildConfig
-//	TektonResources TektonResources
-//	ArgoCDResources ArgoCDResources
-//}
-//
-//// ServiceAccount holds the details about the service account resource
-//type ServiceAccount struct {
-//	Name        string
-//	SecretNames []string
-//}
-//
-//// RoleBinding holds the details about the role binding resource
-//type RoleBinding struct {
-//	Name               string
-//	RoleName           string
-//	ServiceAccountName string
-//}
-//
-//// Role holds the details about the role resource
-//type Role struct {
-//	Name        string
-//	PolicyRules []PolicyRule
-//}
-//
-//// PolicyRule holds the details about the policy rules for the service account resources
-//type PolicyRule struct {
-//	APIGroups []string
-//	Resources []string
-//	Verbs     []string
-//}
-//
-//// BuildConfig contains the resources needed to create a BuildConfig
-//type BuildConfig struct {
-//	Name              string
-//	ImageStreamName   string
-//	ImageStreamTag    string
-//	SourceSecretName  string
-//	WebhookSecretName string
-//	ContainerBuild    ContainerBuild
-//}
+// EnhancedIR is IR with extra data specific to API resource sets
+type EnhancedIR struct {
+	IR
+	Roles           []Role
+	RoleBindings    []RoleBinding
+	ServiceAccounts []ServiceAccount
+	BuildConfigs    []BuildConfig
+	TektonResources TektonResources
+	ArgoCDResources ArgoCDResources
+}
+
+// ServiceAccount holds the details about the service account resource
+type ServiceAccount struct {
+	Name        string
+	SecretNames []string
+}
+
+// RoleBinding holds the details about the role binding resource
+type RoleBinding struct {
+	Name               string
+	RoleName           string
+	ServiceAccountName string
+}
+
+// Role holds the details about the role resource
+type Role struct {
+	Name        string
+	PolicyRules []PolicyRule
+}
+
+// PolicyRule holds the details about the policy rules for the service account resources
+type PolicyRule struct {
+	APIGroups []string
+	Resources []string
+	Verbs     []string
+}
+
+// BuildConfig contains the resources needed to create a BuildConfig
+type BuildConfig struct {
+	Name              string
+	ImageStreamName   string
+	ImageStreamTag    string
+	SourceSecretName  string
+	WebhookSecretName string
+	ContainerBuild    ContainerBuild
+}
