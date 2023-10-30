@@ -19,13 +19,13 @@ package dockerfilegenerator
 import (
 	"bufio"
 	"fmt"
+	"github.com/konveyor/move2kube-wasm/qaengine"
 	"os"
 	"path/filepath"
 	"regexp"
 
 	"github.com/konveyor/move2kube-wasm/common"
 	"github.com/konveyor/move2kube-wasm/environment"
-	//"github.com/konveyor/move2kube/qaengine"
 	//irtypes "github.com/konveyor/move2kube/types/ir"
 	//"github.com/konveyor/move2kube/types/qaengine/commonqa"
 	transformertypes "github.com/konveyor/move2kube-wasm/types/transformer"
@@ -127,13 +127,11 @@ func getMainPythonFileForService(mainPythonFilesPath []string, baseDir string, s
 			mainPythonFilesRelPath = append(mainPythonFilesRelPath, mainPythonFileRelPath)
 		}
 	}
-	//TODO: WASI
 
-	//quesKey := common.JoinQASubKeys(common.ConfigServicesKey, `"`+serviceName+`"`, common.ConfigMainPythonFileForServiceKeySegment)
-	//desc := fmt.Sprintf("Select the main file to be used for the service %s :", serviceName)
-	//hints := []string{fmt.Sprintf("Selected main file will be used for the service %s", serviceName)}
-	//return qaengine.FetchSelectAnswer(quesKey, desc, hints, mainPythonFilesRelPath[0], mainPythonFilesRelPath, nil)
-	return ""
+	quesKey := common.JoinQASubKeys(common.ConfigServicesKey, `"`+serviceName+`"`, common.ConfigMainPythonFileForServiceKeySegment)
+	desc := fmt.Sprintf("Select the main file to be used for the service %s :", serviceName)
+	hints := []string{fmt.Sprintf("Selected main file will be used for the service %s", serviceName)}
+	return qaengine.FetchSelectAnswer(quesKey, desc, hints, mainPythonFilesRelPath[0], mainPythonFilesRelPath, nil)
 }
 
 // getStartingPythonFileForService returns the starting python file used by a service
@@ -144,13 +142,11 @@ func getStartingPythonFileForService(pythonFilesPath []string, baseDir string, s
 			pythonFilesRelPath = append(pythonFilesRelPath, pythonFileRelPath)
 		}
 	}
-	//TODO: WASI
 
-	//quesKey := common.JoinQASubKeys(common.ConfigServicesKey, `"`+serviceName+`"`, common.ConfigStartingPythonFileForServiceKeySegment)
-	//desc := fmt.Sprintf("Select the python file to be used for the service %s :", serviceName)
-	//hints := []string{fmt.Sprintf("Selected python file will be used for starting the service %s", serviceName)}
-	//return qaengine.FetchSelectAnswer(quesKey, desc, hints, pythonFilesRelPath[0], pythonFilesRelPath, nil)
-	return ""
+	quesKey := common.JoinQASubKeys(common.ConfigServicesKey, `"`+serviceName+`"`, common.ConfigStartingPythonFileForServiceKeySegment)
+	desc := fmt.Sprintf("Select the python file to be used for the service %s :", serviceName)
+	hints := []string{fmt.Sprintf("Selected python file will be used for starting the service %s", serviceName)}
+	return qaengine.FetchSelectAnswer(quesKey, desc, hints, pythonFilesRelPath[0], pythonFilesRelPath, nil)
 }
 
 // DirectoryDetect runs detect in each sub directory

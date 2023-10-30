@@ -22,8 +22,6 @@ import (
 	"path/filepath"
 	"sort"
 
-	//"sort"
-
 	"github.com/konveyor/move2kube-wasm/common"
 	"github.com/konveyor/move2kube-wasm/environment"
 	"github.com/konveyor/move2kube-wasm/types"

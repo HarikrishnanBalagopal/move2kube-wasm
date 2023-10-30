@@ -1070,3 +1070,59 @@ func Map[T1 interface{}, T2 interface{}](vs []T1, f func(T1) T2) []T2 {
 	}
 	return ws
 }
+
+// ConvertInterfaceToSliceOfStrings converts an interface{} to a []string type.
+// It can handle []interface{} as long as all the values are strings.
+func ConvertInterfaceToSliceOfStrings(xI interface{}) ([]string, error) {
+	if x, ok := xI.([]string); ok {
+		return x, nil
+	}
+	vIs, ok := xI.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("failed to convert to []string. Actual value is %+v of type %T", xI, xI)
+	}
+	vs := []string{}
+	for _, vI := range vIs {
+		v, ok := vI.(string)
+		if !ok {
+			return vs, fmt.Errorf("some of the values are not strings. Actual value is %+v of type %T", xI, xI)
+		}
+		vs = append(vs, v)
+	}
+	return vs, nil
+}
+
+// SplitOnDotExpectInsideQuotes splits a string on dot.
+// Stuff inside double or single quotes will not be split.
+func SplitOnDotExpectInsideQuotes(s string) []string {
+	return regexp.MustCompile(`[^."']+|"[^"]*"|'[^']*'`).FindAllString(s, -1)
+}
+
+// ReverseInPlace reverses a slice in place.
+func ReverseInPlace[T interface{}](xs []T) {
+	for i, j := 0, len(xs)-1; i < j; {
+		xs[i], xs[j] = xs[j], xs[i]
+		i++
+		j--
+	}
+}
+
+// SplitYAML splits a file into multiple YAML documents.
+func SplitYAML(rawYAML []byte) ([][]byte, error) {
+	decoder := yaml.NewDecoder(bytes.NewReader(rawYAML))
+	var docs [][]byte
+	for {
+		var value interface{}
+		if err := decoder.Decode(&value); err != nil {
+			if errors.Is(err, io.EOF) {
+				return docs, nil
+			}
+			return docs, err
+		}
+		doc, err := yaml.Marshal(value)
+		if err != nil {
+			return docs, fmt.Errorf("failed to marshal the YAML document of type %T and value %+v back to bytes. Error: %q", value, value, err)
+		}
+		docs = append(docs, doc)
+	}
+}

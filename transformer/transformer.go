@@ -24,6 +24,7 @@ import (
 	"github.com/konveyor/move2kube-wasm/environment"
 	containertypes "github.com/konveyor/move2kube-wasm/environment/container"
 	"github.com/konveyor/move2kube-wasm/filesystem"
+	"github.com/konveyor/move2kube-wasm/qaengine"
 	"github.com/konveyor/move2kube-wasm/transformer/dockerfilegenerator"
 	"github.com/konveyor/move2kube-wasm/types"
 	environmenttypes "github.com/konveyor/move2kube-wasm/types/environment"
@@ -37,8 +38,6 @@ import (
 	"strings"
 
 	graphtypes "github.com/konveyor/move2kube-wasm/types/graph"
-	//"fmt"
-	//"github.com/konveyor/move2kube-wasm/common"
 	plantypes "github.com/konveyor/move2kube-wasm/types/plan"
 	"reflect"
 
@@ -183,22 +182,21 @@ func InitTransformers(transformerYamlPaths map[string]string, selector labels.Se
 		logrus.Debug("already initialized")
 		return nil, nil
 	}
-	// TODO: Disabled for WASI
-	//transformerFilterString := qaengine.FetchStringAnswer(
-	//	common.TransformerSelectorKey,
-	//	"Specify a Kubernetes style selector to select only the transformers that you want to run.",
-	//	[]string{"Leave empty to select everything. This is the default."},
-	//	"",
-	//	nil,
-	//)
-	//if transformerFilterString != "" {
-	//	if transformerFilter, err := common.ConvertStringSelectorsToSelectors(transformerFilterString); err != nil {
-	//		logrus.Errorf("failed to parse the transformer filter string: %s . Error: %q", transformerFilterString, err)
-	//	} else {
-	//		reqs, _ := transformerFilter.Requirements()
-	//		selector = selector.Add(reqs...)
-	//	}
-	//}
+	transformerFilterString := qaengine.FetchStringAnswer(
+		common.TransformerSelectorKey,
+		"Specify a Kubernetes style selector to select only the transformers that you want to run.",
+		[]string{"Leave empty to select everything. This is the default."},
+		"",
+		nil,
+	)
+	if transformerFilterString != "" {
+		if transformerFilter, err := common.ConvertStringSelectorsToSelectors(transformerFilterString); err != nil {
+			logrus.Errorf("failed to parse the transformer filter string: %s . Error: %q", transformerFilterString, err)
+		} else {
+			reqs, _ := transformerFilter.Requirements()
+			selector = selector.Add(reqs...)
+		}
+	}
 	transformerConfigs := getFilteredTransformers(transformerYamlPaths, selector, logError)
 	deselectedTransformers := map[string]string{}
 	for transformerName, transformerPath := range transformerYamlPaths {
@@ -215,15 +213,14 @@ func InitTransformers(transformerYamlPaths map[string]string, selector labels.Se
 		}
 	}
 	sort.Strings(transformerNames)
-	selectedTransformerNames := []string{"Golang-Dockerfile"}
-	//selectedTransformerNames := qaengine.FetchMultiSelectAnswer(
-	//	common.ConfigTransformerTypesKey,
-	//	"Select all transformer types that you are interested in:",
-	//	[]string{"Services that don't support any of the transformer types you are interested in will be ignored."},
-	//	transformerNamesSelectedByDefault,
-	//	transformerNames,
-	//	nil,
-	//)
+	selectedTransformerNames := qaengine.FetchMultiSelectAnswer(
+		common.ConfigTransformerTypesKey,
+		"Select all transformer types that you are interested in:",
+		[]string{"Services that don't support any of the transformer types you are interested in will be ignored."},
+		transformerNamesSelectedByDefault,
+		transformerNames,
+		nil,
+	)
 	for _, transformerName := range transformerNames {
 		if !common.IsPresent(selectedTransformerNames, transformerName) {
 			deselectedTransformers[transformerName] = transformerYamlPaths[transformerName]

@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/konveyor/move2kube-wasm/common"
+	"github.com/konveyor/move2kube-wasm/qaengine"
 	"github.com/konveyor/move2kube-wasm/transformer"
 	"github.com/konveyor/move2kube-wasm/transformer/external"
 	plantypes "github.com/konveyor/move2kube-wasm/types/plan"
@@ -74,16 +75,14 @@ func Transform(ctx context.Context, plan plantypes.Plan, preExistingPlan bool, o
 		serviceNames = append(serviceNames, serviceName)
 	}
 	sort.Strings(serviceNames)
-	//TODO: WASI
-	//selectedServiceNames := qaengine.FetchMultiSelectAnswer(
-	//	common.ConfigServicesNamesKey,
-	//	"Select all services that are needed:",
-	//	[]string{"The services unselected here will be ignored."},
-	//	serviceNames,
-	//	serviceNames,
-	//	nil,
-	//)
-	selectedServiceNames := serviceNames
+	selectedServiceNames := qaengine.FetchMultiSelectAnswer(
+		common.ConfigServicesNamesKey,
+		"Select all services that are needed:",
+		[]string{"The services unselected here will be ignored."},
+		serviceNames,
+		serviceNames,
+		nil,
+	)
 	// select the first valid transformation option for each selected service
 	selectedTransformationOptions := []plantypes.PlanArtifact{}
 	for _, selectedServiceName := range selectedServiceNames {

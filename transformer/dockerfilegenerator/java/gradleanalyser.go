@@ -19,6 +19,7 @@ package java
 import (
 	"bufio"
 	"fmt"
+	"github.com/konveyor/move2kube-wasm/qaengine"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -439,11 +440,10 @@ func (t *GradleAnalyser) TransformArtifact(newArtifact transformertypes.Artifact
 		selectedChildModuleNames = append(selectedChildModuleNames, childModule.Name)
 	}
 	if len(selectedChildModuleNames) > 1 {
-		//TODO: WASI
-		//quesKey := fmt.Sprintf(common.ConfigServicesChildModulesNamesKey, `"`+serviceConfig.ServiceName+`"`)
-		//desc := fmt.Sprintf("For the multi-module Gradle project '%s', please select all the child modules that should be run as services in the cluster:", serviceConfig.ServiceName)
-		//hints := []string{"deselect child modules that should not be run (like libraries)"}
-		//selectedChildModuleNames = qaengine.FetchMultiSelectAnswer(quesKey, desc, hints, selectedChildModuleNames, selectedChildModuleNames, nil)
+		quesKey := fmt.Sprintf(common.ConfigServicesChildModulesNamesKey, `"`+serviceConfig.ServiceName+`"`)
+		desc := fmt.Sprintf("For the multi-module Gradle project '%s', please select all the child modules that should be run as services in the cluster:", serviceConfig.ServiceName)
+		hints := []string{"deselect child modules that should not be run (like libraries)"}
+		selectedChildModuleNames = qaengine.FetchMultiSelectAnswer(quesKey, desc, hints, selectedChildModuleNames, selectedChildModuleNames, nil)
 		if len(selectedChildModuleNames) == 0 {
 			return pathMappings, createdArtifacts, fmt.Errorf("user deselected all the child modules of the gradle multi-module project '%s'", serviceConfig.ServiceName)
 		}
@@ -489,16 +489,14 @@ func (t *GradleAnalyser) TransformArtifact(newArtifact transformertypes.Artifact
 
 		// have the user select which spring boot profiles to use and find a suitable list of ports
 
-		//desc := fmt.Sprintf("Select the spring boot profiles for the service '%s' :", childModule.Name)
-		//hints := []string{"select all the profiles that are applicable"}
+		desc := fmt.Sprintf("Select the spring boot profiles for the service '%s' :", childModule.Name)
+		hints := []string{"select all the profiles that are applicable"}
 		detectedPorts := []int32{}
 		envVarsMap := map[string]string{}
 		if childModuleInfo.SpringBoot != nil {
 			if childModuleInfo.SpringBoot.SpringBootProfiles != nil && len(*childModuleInfo.SpringBoot.SpringBootProfiles) != 0 {
-				//TODO: WASI
-				//quesKey := fmt.Sprintf(common.ConfigServicesChildModulesSpringProfilesKey, `"`+serviceConfig.ServiceName+`"`, `"`+childModule.Name+`"`)
-				//selectedSpringProfiles := qaengine.FetchMultiSelectAnswer(quesKey, desc, hints, *childModuleInfo.SpringBoot.SpringBootProfiles, *childModuleInfo.SpringBoot.SpringBootProfiles, nil)
-				selectedSpringProfiles := []string{""}
+				quesKey := fmt.Sprintf(common.ConfigServicesChildModulesSpringProfilesKey, `"`+serviceConfig.ServiceName+`"`, `"`+childModule.Name+`"`)
+				selectedSpringProfiles := qaengine.FetchMultiSelectAnswer(quesKey, desc, hints, *childModuleInfo.SpringBoot.SpringBootProfiles, *childModuleInfo.SpringBoot.SpringBootProfiles, nil)
 				for _, selectedSpringProfile := range selectedSpringProfiles {
 					detectedPorts = append(detectedPorts, childModuleInfo.SpringBoot.SpringBootProfilePorts[selectedSpringProfile]...)
 				}

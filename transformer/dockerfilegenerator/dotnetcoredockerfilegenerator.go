@@ -19,6 +19,8 @@ package dockerfilegenerator
 import (
 	"encoding/xml"
 	"fmt"
+	"github.com/konveyor/move2kube-wasm/qaengine"
+	"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	"net/url"
 	"path/filepath"
 	"regexp"
@@ -26,10 +28,8 @@ import (
 
 	"github.com/konveyor/move2kube-wasm/common"
 	"github.com/konveyor/move2kube-wasm/environment"
-	//"github.com/konveyor/move2kube-wasm/qaengine"
 	dotnetutils "github.com/konveyor/move2kube-wasm/transformer/dockerfilegenerator/dotnet"
 	//irtypes "github.com/konveyor/move2kube-wasm/types/ir"
-	//"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	"github.com/konveyor/move2kube-wasm/types/source/dotnet"
 	transformertypes "github.com/konveyor/move2kube-wasm/types/transformer"
 	"github.com/konveyor/move2kube-wasm/types/transformer/artifacts"
@@ -283,11 +283,10 @@ func (t *DotNetCoreDockerfileGenerator) TransformArtifact(newArtifact transforme
 		selectedChildProjectNames = append(selectedChildProjectNames, childProject.Name)
 	}
 	if len(selectedChildProjectNames) > 1 {
-		//TODO: WASI
-		//quesKey := fmt.Sprintf(common.ConfigServicesDotNetChildProjectsNamesKey, `"`+newArtifact.Name+`"`)
-		//desc := fmt.Sprintf("For the multi-project Dot Net Core app '%s', please select all the child projects that should be run as services in the cluster:", newArtifact.Name)
-		//hints := []string{"deselect any child project that should not be run (example: libraries)"}
-		//selectedChildProjectNames = qaengine.FetchMultiSelectAnswer(quesKey, desc, hints, selectedChildProjectNames, selectedChildProjectNames, nil)
+		quesKey := fmt.Sprintf(common.ConfigServicesDotNetChildProjectsNamesKey, `"`+newArtifact.Name+`"`)
+		desc := fmt.Sprintf("For the multi-project Dot Net Core app '%s', please select all the child projects that should be run as services in the cluster:", newArtifact.Name)
+		hints := []string{"deselect any child project that should not be run (example: libraries)"}
+		selectedChildProjectNames = qaengine.FetchMultiSelectAnswer(quesKey, desc, hints, selectedChildProjectNames, selectedChildProjectNames, nil)
 		if len(selectedChildProjectNames) == 0 {
 			return pathMappings, artifactsCreated, fmt.Errorf("user deselected all the child projects of the dot net core multi-project app '%s'", newArtifact.Name)
 		}
@@ -560,7 +559,7 @@ func (t *DotNetCoreDockerfileGenerator) TransformArtifact(newArtifact transforme
 
 		// have the user select the ports to use for the child project
 
-		//templateConfig.Ports = commonqa.GetPortsForService(childProjectPorts, qaSubKey)
+		templateConfig.Ports = commonqa.GetPortsForService(childProjectPorts, qaSubKey)
 
 		dockerfilePath := filepath.Join(common.DefaultSourceDir, relServiceDir, relCSProjDir, common.DefaultDockerfileName)
 		pathMappings = append(pathMappings, transformertypes.PathMapping{
@@ -648,10 +647,9 @@ func getPublishProfile(profilePaths []string, subKey, baseDir string) (string, s
 	}
 	relSelectedProfilePath := relProfilePaths[0]
 	if len(relProfilePaths) > 1 {
-		//TODO: WASI
-		//quesKey := common.JoinQASubKeys(common.ConfigServicesKey, subKey, common.ConfigPublishProfileForServiceKeySegment)
-		//desc := fmt.Sprintf("Select the profile to be use for publishing the ASP.NET child project %s :", subKey)
-		//relSelectedProfilePath = qaengine.FetchSelectAnswer(quesKey, desc, nil, relSelectedProfilePath, relProfilePaths, nil)
+		quesKey := common.JoinQASubKeys(common.ConfigServicesKey, subKey, common.ConfigPublishProfileForServiceKeySegment)
+		desc := fmt.Sprintf("Select the profile to be use for publishing the ASP.NET child project %s :", subKey)
+		relSelectedProfilePath = qaengine.FetchSelectAnswer(quesKey, desc, nil, relSelectedProfilePath, relProfilePaths, nil)
 	}
 	selectedProfilePath := filepath.Join(baseDir, relSelectedProfilePath)
 	publishUrl, err := parsePublishProfileFile(selectedProfilePath)

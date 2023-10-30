@@ -17,7 +17,7 @@ import (
 	// "github.com/konveyor/move2kube/common/download"
 	// "github.com/konveyor/move2kube/common/vcs"
 	"github.com/konveyor/move2kube-wasm/lib"
-	// "github.com/konveyor/move2kube/qaengine"
+	"github.com/konveyor/move2kube-wasm/qaengine"
 	plantypes "github.com/konveyor/move2kube-wasm/types/plan"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -230,11 +230,11 @@ func planHandler(cmd *cobra.Command, flags planFlags) {
 		}
 	}
 
-	//qaengine.StartEngine(true, 0, true)
-	//qaengine.SetupConfigFile("", flags.setconfigs, flags.configs, flags.preSets, false)
-	//if flags.progressServerPort != 0 {
-	//	startPlanProgressServer(flags.progressServerPort)
-	//}
+	qaengine.StartEngine(true, 0, true)
+	qaengine.SetupConfigFile("", flags.setconfigs, flags.configs, flags.preSets, false)
+	if flags.progressServerPort != 0 {
+		startPlanProgressServer(flags.progressServerPort)
+	}
 	p, err := lib.CreatePlan(ctx, srcpath, "", customizationsPath, flags.transformerSelector, name)
 	if err != nil {
 		logrus.Fatalf("failed to create the plan. Error: %q", err)
