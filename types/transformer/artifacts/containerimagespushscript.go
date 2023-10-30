@@ -17,28 +17,17 @@
 package artifacts
 
 import (
-	"reflect"
-
-	"github.com/konveyor/move2kube-wasm/common"
-	collecttypes "github.com/konveyor/move2kube-wasm/types/collection"
 	transformertypes "github.com/konveyor/move2kube-wasm/types/transformer"
 )
 
-var (
-	// ConfigTypes stores the various config types
-	ConfigTypes map[string]reflect.Type
+const (
+	// ContainerImagesPushScriptArtifactType represents the image push script artifact type
+	ContainerImagesPushScriptArtifactType transformertypes.ArtifactType = "ContainerImagesPushScript"
 )
 
-func init() {
-	configObjs := []transformertypes.Config{
-		//TODO: WASI
-		//new(ir.IR),
-		new(NewImages),
-		new(MavenConfig),
-		new(GradleConfig),
-		new(SpringBootConfig),
-		new(ContainerizationOptionsConfig),
-		new(collecttypes.ClusterMetadata),
-	}
-	ConfigTypes = common.GetTypesMap(configObjs)
-}
+const (
+	// ContainerImagesPushShScriptPathType represents the image push script path type
+	ContainerImagesPushShScriptPathType transformertypes.PathType = "ContainerImagesPushShScript"
+	// ContainerImagesPushBatScriptPathType represents the image push script path type
+	ContainerImagesPushBatScriptPathType transformertypes.PathType = "ContainerImagesPushBatScript"
+)

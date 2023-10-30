@@ -17,28 +17,19 @@
 package artifacts
 
 import (
-	"reflect"
-
-	"github.com/konveyor/move2kube-wasm/common"
-	collecttypes "github.com/konveyor/move2kube-wasm/types/collection"
 	transformertypes "github.com/konveyor/move2kube-wasm/types/transformer"
 )
 
-var (
-	// ConfigTypes stores the various config types
-	ConfigTypes map[string]reflect.Type
-)
+const (
+	// KubernetesYamlsArtifactType is the name of the Kubernetes artifact type
+	KubernetesYamlsArtifactType transformertypes.ArtifactType = "KubernetesYamls"
 
-func init() {
-	configObjs := []transformertypes.Config{
-		//TODO: WASI
-		//new(ir.IR),
-		new(NewImages),
-		new(MavenConfig),
-		new(GradleConfig),
-		new(SpringBootConfig),
-		new(ContainerizationOptionsConfig),
-		new(collecttypes.ClusterMetadata),
-	}
-	ConfigTypes = common.GetTypesMap(configObjs)
-}
+	// KubernetesYamlsInSourceArtifactType is the name of the Kubernetes artifact type
+	KubernetesYamlsInSourceArtifactType transformertypes.ArtifactType = "KubernetesYamlsInSource"
+
+	// KubernetesOrgYamlsInSourceArtifactType is the name of the Kubernetes original yamls artifact type
+	KubernetesOrgYamlsInSourceArtifactType transformertypes.ArtifactType = "KubernetesOrgYamlsInSource"
+
+	// KubernetesYamlsPathType is points to the kubernetes Yamls
+	KubernetesYamlsPathType transformertypes.PathType = "KubernetesYamls"
+)
