@@ -25,7 +25,12 @@ import (
 	containertypes "github.com/konveyor/move2kube-wasm/environment/container"
 	"github.com/konveyor/move2kube-wasm/filesystem"
 	"github.com/konveyor/move2kube-wasm/qaengine"
+	"github.com/konveyor/move2kube-wasm/transformer/containerimage"
+	"github.com/konveyor/move2kube-wasm/transformer/dockerfile"
 	"github.com/konveyor/move2kube-wasm/transformer/dockerfilegenerator"
+	"github.com/konveyor/move2kube-wasm/transformer/dockerfilegenerator/java"
+	"github.com/konveyor/move2kube-wasm/transformer/dockerfilegenerator/windows"
+	"github.com/konveyor/move2kube-wasm/transformer/kubernetes"
 	"github.com/konveyor/move2kube-wasm/types"
 	environmenttypes "github.com/konveyor/move2kube-wasm/types/environment"
 	"github.com/konveyor/move2kube-wasm/types/transformer/artifacts"
@@ -89,45 +94,45 @@ func init() {
 		//
 		//new(dockerfile.DockerfileDetector),
 		//new(dockerfile.DockerfileParser),
-		//new(dockerfile.DockerfileImageBuildScript),
-		//new(dockerfilegenerator.NodejsDockerfileGenerator),
+		new(dockerfile.DockerfileImageBuildScript),
+		new(dockerfilegenerator.NodejsDockerfileGenerator),
 		new(dockerfilegenerator.GolangDockerfileGenerator),
-		//new(dockerfilegenerator.PHPDockerfileGenerator),
-		//new(dockerfilegenerator.PythonDockerfileGenerator),
-		//new(dockerfilegenerator.RubyDockerfileGenerator),
-		//new(dockerfilegenerator.RustDockerfileGenerator),
-		//new(dockerfilegenerator.DotNetCoreDockerfileGenerator),
-		//new(java.JarAnalyser),
-		//new(java.WarAnalyser),
-		//new(java.EarAnalyser),
-		//new(java.Tomcat),
-		//new(java.Liberty),
-		//new(java.Jboss),
-		//new(java.MavenAnalyser),
-		//new(java.GradleAnalyser),
-		//new(java.ZuulAnalyser),
-		//new(windows.WinConsoleAppDockerfileGenerator),
-		//new(windows.WinSilverLightWebAppDockerfileGenerator),
-		//new(windows.WinWebAppDockerfileGenerator),
+		new(dockerfilegenerator.PHPDockerfileGenerator),
+		new(dockerfilegenerator.PythonDockerfileGenerator),
+		new(dockerfilegenerator.RubyDockerfileGenerator),
+		new(dockerfilegenerator.RustDockerfileGenerator),
+		new(dockerfilegenerator.DotNetCoreDockerfileGenerator),
+		new(java.JarAnalyser),
+		new(java.WarAnalyser),
+		new(java.EarAnalyser),
+		new(java.Tomcat),
+		new(java.Liberty),
+		new(java.Jboss),
+		new(java.MavenAnalyser),
+		new(java.GradleAnalyser),
+		new(java.ZuulAnalyser),
+		new(windows.WinConsoleAppDockerfileGenerator),
+		new(windows.WinSilverLightWebAppDockerfileGenerator),
+		new(windows.WinWebAppDockerfileGenerator),
 		//new(CNBContainerizer),
 		//new(compose.ComposeAnalyser),
 		//new(compose.ComposeGenerator),
 		//
 		//new(CloudFoundry),
-		//
-		//new(containerimage.ContainerImagesPushScript),
-		//
-		//new(kubernetes.ClusterSelectorTransformer),
-		//new(kubernetes.Kubernetes),
+
+		new(containerimage.ContainerImagesPushScript),
+
+		new(kubernetes.ClusterSelectorTransformer),
+		new(kubernetes.Kubernetes),
 		//new(kubernetes.Knative),
 		//new(kubernetes.Tekton),
-		//// new(kubernetes.ArgoCD),
+		// new(kubernetes.ArgoCD),
 		//new(kubernetes.BuildConfig),
-		//new(kubernetes.Parameterizer),
+		new(kubernetes.Parameterizer),
 		//new(kubernetes.KubernetesVersionChanger),
 		//new(kubernetes.OperatorTransformer),
-		//
-		//new(ReadMeGenerator),
+
+		new(ReadMeGenerator),
 		//new(InvokeDetect),
 	}
 	transformerTypes = common.GetTypesMap(transformerObjs)
