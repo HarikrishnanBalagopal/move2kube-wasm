@@ -20,6 +20,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/konveyor/move2kube-wasm/qaengine"
+	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
 	"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	"net/url"
 	"path/filepath"
@@ -297,16 +298,14 @@ func (t *DotNetCoreDockerfileGenerator) TransformArtifact(newArtifact transforme
 	if err != nil {
 		return pathMappings, artifactsCreated, fmt.Errorf("failed to make the service directory path %s relative to the source directory %s . Error: %q", serviceDir, t.Env.GetEnvironmentSource(), err)
 	}
-	//TODO: WASI
-	//ir := irtypes.IR{}
-	//irPresent := true
-	//if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err != nil {
-	//	irPresent = false
-	//	logrus.Debugf("failed to load the IR config from the dot net artifact. Error: %q Artifact: %+v", err, newArtifact)
-	//}
-	//
-	//detectedPorts := ir.GetAllServicePorts()
-	detectedPorts := []int32{}
+	ir := irtypes.IR{}
+	irPresent := true
+	if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err != nil {
+		irPresent = false
+		logrus.Debugf("failed to load the IR config from the dot net artifact. Error: %q Artifact: %+v", err, newArtifact)
+	}
+
+	detectedPorts := ir.GetAllServicePorts()
 
 	// copy over the source dir to hold the dockerfiles we genrate
 
@@ -592,10 +591,9 @@ func (t *DotNetCoreDockerfileGenerator) TransformArtifact(newArtifact transforme
 				artifacts.ImageNameConfigType: imageName,
 			},
 		}
-		//TODO: WASI
-		//if irPresent {
-		//	dockerfileServiceArtifact.Configs[irtypes.IRConfigType] = ir
-		//}
+		if irPresent {
+			dockerfileServiceArtifact.Configs[irtypes.IRConfigType] = ir
+		}
 		artifactsCreated = append(artifactsCreated, dockerfileArtifact, dockerfileServiceArtifact)
 	}
 

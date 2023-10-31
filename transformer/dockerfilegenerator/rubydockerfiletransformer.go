@@ -18,6 +18,8 @@ package dockerfilegenerator
 
 import (
 	"fmt"
+	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
+	"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	"path/filepath"
 
 	"github.com/konveyor/move2kube-wasm/common"
@@ -111,22 +113,21 @@ func (t *RubyDockerfileGenerator) Transform(newArtifacts []transformertypes.Arti
 		if err != nil {
 			logrus.Debugf("unable to load config for Transformer into %T : %s", sImageName, err)
 		}
-		//TODO: WASI
 
-		//ir := irtypes.IR{}
-		//irPresent := true
-		//err = a.GetConfig(irtypes.IRConfigType, &ir)
-		//if err != nil {
-		//	irPresent = false
-		//	logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
-		//}
+		ir := irtypes.IR{}
+		irPresent := true
+		err = a.GetConfig(irtypes.IRConfigType, &ir)
+		if err != nil {
+			irPresent = false
+			logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
+		}
 		var rubyConfig RubyTemplateConfig
-		//detectedPorts := ir.GetAllServicePorts()
-		//if len(detectedPorts) == 0 {
-		//	detectedPorts = append(detectedPorts, common.DefaultServicePort)
-		//}
-		//rubyConfig.Port = commonqa.GetPortForService(detectedPorts, `"`+a.Name+`"`)
-		//rubyConfig.AppName = a.Name
+		detectedPorts := ir.GetAllServicePorts()
+		if len(detectedPorts) == 0 {
+			detectedPorts = append(detectedPorts, common.DefaultServicePort)
+		}
+		rubyConfig.Port = commonqa.GetPortForService(detectedPorts, `"`+a.Name+`"`)
+		rubyConfig.AppName = a.Name
 		if sImageName.ImageName == "" {
 			sImageName.ImageName = common.MakeStringContainerImageNameCompliant(sConfig.ServiceName)
 		}
@@ -158,9 +159,9 @@ func (t *RubyDockerfileGenerator) Transform(newArtifacts []transformertypes.Arti
 				artifacts.ServiceConfigType:   sConfig,
 			},
 		}
-		//if irPresent {
-		//	dfs.Configs[irtypes.IRConfigType] = ir
-		//}
+		if irPresent {
+			dfs.Configs[irtypes.IRConfigType] = ir
+		}
 		artifactsCreated = append(artifactsCreated, p, dfs)
 	}
 	return pathMappings, artifactsCreated, nil

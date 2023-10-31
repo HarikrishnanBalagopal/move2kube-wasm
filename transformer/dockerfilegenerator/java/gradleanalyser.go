@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/konveyor/move2kube-wasm/qaengine"
+	"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -508,9 +509,7 @@ func (t *GradleAnalyser) TransformArtifact(newArtifact transformertypes.Artifact
 
 		// have the user select the port to use
 
-		//TODO: WASI
-		//selectedPort := commonqa.GetPortForService(detectedPorts, common.JoinQASubKeys(`"`+serviceConfig.ServiceName+`"`, "childModules", `"`+childModule.Name+`"`))
-		selectedPort := int32(9001)
+		selectedPort := commonqa.GetPortForService(detectedPorts, common.JoinQASubKeys(`"`+serviceConfig.ServiceName+`"`, "childModules", `"`+childModule.Name+`"`))
 		if childModuleInfo.SpringBoot != nil {
 			envVarsMap["SERVER_PORT"] = cast.ToString(selectedPort)
 		} else {
@@ -643,15 +642,15 @@ func (t *GradleAnalyser) TransformArtifact(newArtifact transformertypes.Artifact
 	return pathMappings, createdArtifacts, nil
 }
 
-// func getInfoFromSettingsGradle(gradleSettingsPtr *gradle.Gradle, gradleSettingsFilePath string, gradleConfig artifacts.GradleConfig) (gradleInfoT, error) {
-// 	info := gradleInfoT{
-// 		Name:             gradleConfig.RootProjectName,
-// 		IsParentBuild:    len(gradleConfig.ChildModules) > 0,
-// 		IsGradlewPresent: gradleConfig.IsGradlewPresent,
-// 		ChildModules:     gradleConfig.ChildModules,
-// 	}
-// 	return info, nil
-// }
+func getInfoFromSettingsGradle(gradleSettingsPtr *gradle.Gradle, gradleSettingsFilePath string, gradleConfig artifacts.GradleConfig) (gradleInfoT, error) {
+	info := gradleInfoT{
+		Name:             gradleConfig.RootProjectName,
+		IsParentBuild:    len(gradleConfig.ChildModules) > 0,
+		IsGradlewPresent: gradleConfig.IsGradlewPresent,
+		ChildModules:     gradleConfig.ChildModules,
+	}
+	return info, nil
+}
 
 func getInfoFromBuildGradle(gradleBuildPtr *gradle.Gradle, gradleBuildFilePath string, gradleConfig artifacts.GradleConfig, childModule artifacts.GradleChildModule) (gradleInfoT, error) {
 	info := gradleInfoT{

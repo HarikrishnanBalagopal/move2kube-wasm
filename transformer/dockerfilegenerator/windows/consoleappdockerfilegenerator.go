@@ -19,6 +19,8 @@ package windows
 import (
 	"encoding/xml"
 	"fmt"
+	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
+	"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	"io"
 	"net"
 	"net/url"
@@ -261,13 +263,12 @@ func (t *WinConsoleAppDockerfileGenerator) Transform(newArtifacts []transformert
 		if err := newArtifact.GetConfig(artifacts.ImageNameConfigType, &imageName); err != nil {
 			logrus.Debugf("unable to load config for Transformer into %T : %s", imageName, err)
 		}
-		//TODO: WASI
-		//ir := irtypes.IR{}
-		//irPresent := true
-		//if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err != nil {
-		//	irPresent = false
-		//	logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
-		//}
+		ir := irtypes.IR{}
+		irPresent := true
+		if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err != nil {
+			irPresent = false
+			logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
+		}
 		detectedPorts := []int32{}
 		for _, appConfigFilePath := range newArtifact.Paths[AppConfigFilePathListType] {
 			portList, err := t.parseAppConfigForPort(appConfigFilePath)
@@ -279,10 +280,10 @@ func (t *WinConsoleAppDockerfileGenerator) Transform(newArtifacts []transformert
 				detectedPorts = append(detectedPorts, portList...)
 			}
 		}
-		//if len(detectedPorts) == 0 {
-		//	detectedPorts = ir.GetAllServicePorts()
-		//}
-		//detectedPorts = commonqa.GetPortsForService(detectedPorts, `"`+newArtifact.Name+`"`)
+		if len(detectedPorts) == 0 {
+			detectedPorts = ir.GetAllServicePorts()
+		}
+		detectedPorts = commonqa.GetPortsForService(detectedPorts, `"`+newArtifact.Name+`"`)
 		var consoleConfig ConsoleTemplateConfig
 		consoleConfig.AppName = newArtifact.Name
 		consoleConfig.Ports = detectedPorts
@@ -319,9 +320,9 @@ func (t *WinConsoleAppDockerfileGenerator) Transform(newArtifacts []transformert
 				artifacts.ServiceConfigType:   serviceConfig,
 			},
 		}
-		//if irPresent {
-		//	dfs.Configs[irtypes.IRConfigType] = ir
-		//}
+		if irPresent {
+			dfs.Configs[irtypes.IRConfigType] = ir
+		}
 		artifactsCreated = append(artifactsCreated, p, dfs)
 	}
 	return pathMappings, artifactsCreated, nil

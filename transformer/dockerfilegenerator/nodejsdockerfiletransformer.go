@@ -18,12 +18,17 @@ package dockerfilegenerator
 
 import (
 	"fmt"
+	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
+	"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
+	"github.com/spf13/cast"
+	"os"
+
 	//"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	//"github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 	"github.com/konveyor/move2kube-wasm/common"
 	"github.com/konveyor/move2kube-wasm/environment"
 	"github.com/konveyor/move2kube-wasm/types"
@@ -201,13 +206,12 @@ func (t *NodejsDockerfileGenerator) Transform(newArtifacts []transformertypes.Ar
 		if imageName.ImageName == "" {
 			imageName.ImageName = common.MakeStringContainerImageNameCompliant(serviceConfig.ServiceName)
 		}
-		//TODO: WASI
-		//ir := irtypes.IR{}
-		//irPresent := true
-		//if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err != nil {
-		//	irPresent = false
-		//	logrus.Debugf("unable to load config for Transformer into %T . Error: %q", ir, err)
-		//}
+		ir := irtypes.IR{}
+		irPresent := true
+		if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err != nil {
+			irPresent = false
+			logrus.Debugf("unable to load config for Transformer into %T . Error: %q", ir, err)
+		}
 		build := false
 		packageJSON := PackageJSON{}
 		packageJsonPath := filepath.Join(serviceDir, packageJSONFile)
@@ -234,26 +238,24 @@ func (t *NodejsDockerfileGenerator) Transform(newArtifacts []transformertypes.Ar
 				packageManager = parts[0]
 			}
 		}
-		//TODO: WASI
-		//ports := ir.GetAllServicePorts()
-		//if len(ports) == 0 {
-		//	envPath := filepath.Join(serviceDir, ".env")
-		//	envMap, err := godotenv.Read(envPath)
-		//	if err != nil {
-		//		if !os.IsNotExist(err) {
-		//			logrus.Warnf("failed to parse the .env file at the path %s . Error: %q", envPath, err)
-		//		}
-		//	} else if portString, ok := envMap["PORT"]; ok {
-		//		port, err := cast.ToInt32E(portString)
-		//		if err != nil {
-		//			logrus.Errorf("failed to parse the port string '%s' as an integer. Error: %q", portString, err)
-		//		} else {
-		//			ports = []int32{port}
-		//		}
-		//	}
-		//}
-		//port := commonqa.GetPortForService(ports, `"`+newArtifact.Name+`"`)
-		port := int32(9003)
+		ports := ir.GetAllServicePorts()
+		if len(ports) == 0 {
+			envPath := filepath.Join(serviceDir, ".env")
+			envMap, err := godotenv.Read(envPath)
+			if err != nil {
+				if !os.IsNotExist(err) {
+					logrus.Warnf("failed to parse the .env file at the path %s . Error: %q", envPath, err)
+				}
+			} else if portString, ok := envMap["PORT"]; ok {
+				port, err := cast.ToInt32E(portString)
+				if err != nil {
+					logrus.Errorf("failed to parse the port string '%s' as an integer. Error: %q", portString, err)
+				} else {
+					ports = []int32{port}
+				}
+			}
+		}
+		port := commonqa.GetPortForService(ports, `"`+newArtifact.Name+`"`)
 		var props map[string]string
 		if idx := common.FindIndex(t.Spec.NodeVersions, func(x map[string]string) bool { return x[versionKey] == nodeVersion }); idx != -1 {
 			props = t.Spec.NodeVersions[idx]
@@ -295,10 +297,9 @@ func (t *NodejsDockerfileGenerator) Transform(newArtifacts []transformertypes.Ar
 				artifacts.ServiceConfigType:   serviceConfig,
 			},
 		}
-		//TODO: WASI
-		//if irPresent {
-		//	dfs.Configs[irtypes.IRConfigType] = ir
-		//}
+		if irPresent {
+			dfs.Configs[irtypes.IRConfigType] = ir
+		}
 		artifactsCreated = append(artifactsCreated, p, dfs)
 	}
 	return pathMappings, artifactsCreated, nil

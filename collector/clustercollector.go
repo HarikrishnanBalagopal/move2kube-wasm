@@ -18,6 +18,7 @@ package collector
 
 import (
 	"fmt"
+	"github.com/konveyor/move2kube-wasm/transformer/kubernetes/k8sschema"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -552,30 +553,28 @@ func (c *ClusterCollector) collectUsingCLI() (map[string][]string, error) {
 }
 
 func (c *ClusterCollector) getPreferredGVUsingCLI(kind string, availableGroupList []schema.GroupVersion) []string {
-	//TODO: WASI
-	//scheme := k8sschema.GetSchema()
-	//var gvList []string
-	//for _, gvObj := range availableGroupList {
-	//	prioritizedGVList := scheme.PrioritizedVersionsForGroup(gvObj.Group)
-	//	if len(prioritizedGVList) > 0 {
-	//		for _, gv := range prioritizedGVList {
-	//			isSupported, err := c.isSupportedGV(kind, gv.String())
-	//			if isSupported {
-	//				gvList = append(gvList, gv.String())
-	//			} else {
-	//				logrus.Debugf("Group version not found by CLI for kind [%s] : %s", kind, err)
-	//			}
-	//		}
-	//	} else {
-	//		_, gvStr, err := c.getGVKUsingNameCLI(kind)
-	//		if err == nil {
-	//			gvList = append(gvList, gvStr)
-	//		}
-	//	}
-	//}
-	//
-	//return gvList
-	return nil
+	scheme := k8sschema.GetSchema()
+	var gvList []string
+	for _, gvObj := range availableGroupList {
+		prioritizedGVList := scheme.PrioritizedVersionsForGroup(gvObj.Group)
+		if len(prioritizedGVList) > 0 {
+			for _, gv := range prioritizedGVList {
+				isSupported, err := c.isSupportedGV(kind, gv.String())
+				if isSupported {
+					gvList = append(gvList, gv.String())
+				} else {
+					logrus.Debugf("Group version not found by CLI for kind [%s] : %s", kind, err)
+				}
+			}
+		} else {
+			_, gvStr, err := c.getGVKUsingNameCLI(kind)
+			if err == nil {
+				gvList = append(gvList, gvStr)
+			}
+		}
+	}
+
+	return gvList
 }
 
 func (c *ClusterCollector) isSupportedGV(kind string, gvStr string) (bool, error) {

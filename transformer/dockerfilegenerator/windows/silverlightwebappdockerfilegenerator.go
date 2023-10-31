@@ -19,6 +19,8 @@ package windows
 import (
 	"encoding/xml"
 	"fmt"
+	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
+	"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	"os"
 	"path/filepath"
 	"strings"
@@ -167,22 +169,21 @@ func (t *WinSilverLightWebAppDockerfileGenerator) Transform(newArtifacts []trans
 		if err != nil {
 			logrus.Debugf("unable to load config for Transformer into %T : %s", sImageName, err)
 		}
-		//TODO: WASI
-		//ir := irtypes.IR{}
-		//irPresent := true
-		//err = a.GetConfig(irtypes.IRConfigType, &ir)
-		//if err != nil {
-		//	irPresent = false
-		//	logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
-		//}
-		//detectedPorts := ir.GetAllServicePorts()
-		//if len(detectedPorts) == 0 {
-		//	detectedPorts = append(detectedPorts, common.DefaultServicePort)
-		//}
-		//detectedPorts = commonqa.GetPortsForService(detectedPorts, `"`+a.Name+`"`)
+		ir := irtypes.IR{}
+		irPresent := true
+		err = a.GetConfig(irtypes.IRConfigType, &ir)
+		if err != nil {
+			irPresent = false
+			logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
+		}
+		detectedPorts := ir.GetAllServicePorts()
+		if len(detectedPorts) == 0 {
+			detectedPorts = append(detectedPorts, common.DefaultServicePort)
+		}
+		detectedPorts = commonqa.GetPortsForService(detectedPorts, `"`+a.Name+`"`)
 		var silverLightConfig SilverLightTemplateConfig
 		silverLightConfig.AppName = a.Name
-		//silverLightConfig.Ports = detectedPorts
+		silverLightConfig.Ports = detectedPorts
 		if sImageName.ImageName == "" {
 			sImageName.ImageName = common.MakeStringContainerImageNameCompliant(sConfig.ServiceName)
 		}
@@ -214,10 +215,9 @@ func (t *WinSilverLightWebAppDockerfileGenerator) Transform(newArtifacts []trans
 				artifacts.ServiceConfigType:   sConfig,
 			},
 		}
-		//TODO: WASI
-		//if irPresent {
-		//	dfs.Configs[irtypes.IRConfigType] = ir
-		//}
+		if irPresent {
+			dfs.Configs[irtypes.IRConfigType] = ir
+		}
 		artifactsCreated = append(artifactsCreated, p, dfs)
 	}
 	return pathMappings, artifactsCreated, nil

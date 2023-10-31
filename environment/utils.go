@@ -14,31 +14,20 @@
  *  limitations under the License.
  */
 
-package artifacts
+package environment
 
 import (
-	"github.com/konveyor/move2kube-wasm/types/ir"
-	"reflect"
+	"net"
 
-	"github.com/konveyor/move2kube-wasm/common"
-	collecttypes "github.com/konveyor/move2kube-wasm/types/collection"
-	transformertypes "github.com/konveyor/move2kube-wasm/types/transformer"
+	"github.com/sirupsen/logrus"
 )
 
-var (
-	// ConfigTypes stores the various config types
-	ConfigTypes map[string]reflect.Type
-)
-
-func init() {
-	configObjs := []transformertypes.Config{
-		new(ir.IR),
-		new(NewImages),
-		new(MavenConfig),
-		new(GradleConfig),
-		new(SpringBootConfig),
-		new(ContainerizationOptionsConfig),
-		new(collecttypes.ClusterMetadata),
+func getIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		logrus.Errorf("Unable to get IP address : %s", err)
 	}
-	ConfigTypes = common.GetTypesMap(configObjs)
+	defer conn.Close()
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP.String()
 }

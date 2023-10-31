@@ -18,6 +18,7 @@ package java
 
 import (
 	"fmt"
+	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
 	"os"
 	"path/filepath"
 	"strings"
@@ -222,11 +223,10 @@ func (t *JarAnalyser) Transform(newArtifacts []transformertypes.Artifact, alread
 
 		// preserve the ir config and inject cloud foundry vcap properties if it is present
 
-		//TODO: WASI
-		//ir := irtypes.IR{}
-		//if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err == nil {
-		//	dockerfileForServiceArtifact.Configs[irtypes.IRConfigType] = ir
-		//}
+		ir := irtypes.IR{}
+		if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err == nil {
+			dockerfileForServiceArtifact.Configs[irtypes.IRConfigType] = ir
+		}
 
 		createdArtifacts = append(createdArtifacts, dockerfileArtifact, dockerfileForServiceArtifact)
 	}

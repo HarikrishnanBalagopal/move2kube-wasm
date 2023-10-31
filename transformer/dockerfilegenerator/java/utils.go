@@ -18,6 +18,7 @@ package java
 
 import (
 	"fmt"
+	"github.com/konveyor/move2kube-wasm/qaengine"
 
 	"github.com/konveyor/move2kube-wasm/common"
 	//"github.com/konveyor/move2kube-wasm/qaengine"
@@ -57,22 +58,20 @@ func getJavaPackage(mappingFile string, version string) (pkg string, err error) 
 
 // askUserForDockerfileType asks the user what type of Dockerfiles to generate.
 func askUserForDockerfileType(rootProjectName string) (buildOption, error) {
-	//TODO: WASI
-	//quesId := common.JoinQASubKeys(common.ConfigServicesKey, `"`+rootProjectName+`"`, "dockerfileType")
-	//desc := fmt.Sprintf("What type of Dockerfiles should be generated for the service '%s'?", rootProjectName)
-	//options := []string{
-	//	string(NO_BUILD_STAGE),
-	//	string(BUILD_IN_BASE_IMAGE),
-	//	string(BUILD_IN_EVERY_IMAGE),
-	//}
+	quesId := common.JoinQASubKeys(common.ConfigServicesKey, `"`+rootProjectName+`"`, "dockerfileType")
+	desc := fmt.Sprintf("What type of Dockerfiles should be generated for the service '%s'?", rootProjectName)
+	options := []string{
+		string(NO_BUILD_STAGE),
+		string(BUILD_IN_BASE_IMAGE),
+		string(BUILD_IN_EVERY_IMAGE),
+	}
 	def := BUILD_IN_BASE_IMAGE
-	//hints := []string{
-	//	fmt.Sprintf("[%s] There is no build stage. Dockerfiles will only contain the run stage. The jar/war/ear files will need to be built and present in the file system already, for them to get copied into the container.", NO_BUILD_STAGE),
-	//	fmt.Sprintf("[%s] Put the build stage in a separate Dockerfile and create a base image.", BUILD_IN_BASE_IMAGE),
-	//	fmt.Sprintf("[%s] Put the build stage in every Dockerfile to make it self contained. (Warning: This may cause one build per Dockerfile.)", BUILD_IN_EVERY_IMAGE),
-	//}
-	//selectedBuildOption := buildOption(qaengine.FetchSelectAnswer(quesId, desc, hints, string(def), options, nil))
-	selectedBuildOption := NO_BUILD_STAGE
+	hints := []string{
+		fmt.Sprintf("[%s] There is no build stage. Dockerfiles will only contain the run stage. The jar/war/ear files will need to be built and present in the file system already, for them to get copied into the container.", NO_BUILD_STAGE),
+		fmt.Sprintf("[%s] Put the build stage in a separate Dockerfile and create a base image.", BUILD_IN_BASE_IMAGE),
+		fmt.Sprintf("[%s] Put the build stage in every Dockerfile to make it self contained. (Warning: This may cause one build per Dockerfile.)", BUILD_IN_EVERY_IMAGE),
+	}
+	selectedBuildOption := buildOption(qaengine.FetchSelectAnswer(quesId, desc, hints, string(def), options, nil))
 	switch selectedBuildOption {
 	case NO_BUILD_STAGE, BUILD_IN_BASE_IMAGE, BUILD_IN_EVERY_IMAGE:
 		return selectedBuildOption, nil
