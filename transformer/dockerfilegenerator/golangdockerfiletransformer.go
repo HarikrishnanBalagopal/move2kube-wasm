@@ -42,8 +42,6 @@ const (
 	GolangModFilePathType transformertypes.PathType = "GoModFilePath"
 	// GolangVersionsMappingKind defines kind of GolangVersionMappingKind
 	GolangVersionsMappingKind types.Kind = "GolangVersionsMapping"
-	imageTagKey                          = "imageTag"
-	versionKey                           = "version"
 )
 
 // GolangVersionsMapping stores the Go versions mapping
