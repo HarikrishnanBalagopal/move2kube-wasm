@@ -19,6 +19,9 @@ package container
 import (
 	"errors"
 	"fmt"
+	"github.com/konveyor/move2kube-wasm/common"
+	"github.com/konveyor/move2kube-wasm/qaengine"
+
 	//dockertypes "github.com/docker/docker/api/types"
 	environmenttypes "github.com/konveyor/move2kube-wasm/types/environment"
 	"github.com/sirupsen/logrus"
@@ -73,18 +76,18 @@ func GetContainerEngine(spawnContainers bool) (ContainerEngine, error) {
 	logrus.Trace("GetContainerEngine start")
 	defer logrus.Trace("GetContainerEngine end")
 	if !inited {
-		//enabled = qaengine.FetchBoolAnswer(
-		//	common.ConfigSpawnContainersKey,
-		//	"Allow spawning containers?",
-		//	[]string{"If this setting is set to false, those transformers that rely on containers will not work."},
-		//	spawnContainers,
-		//	nil,
-		//)
-		//if enabled {
-		//	if err := initContainerEngine(); err != nil {
-		//		return nil, fmt.Errorf("failed to initialize the container engine. Error: %w", err)
-		//	}
-		//}
+		enabled = qaengine.FetchBoolAnswer(
+			common.ConfigSpawnContainersKey,
+			"Allow spawning containers?",
+			[]string{"If this setting is set to false, those transformers that rely on containers will not work."},
+			spawnContainers,
+			nil,
+		)
+		if enabled {
+			if err := initContainerEngine(); err != nil {
+				return nil, fmt.Errorf("failed to initialize the container engine. Error: %w", err)
+			}
+		}
 		inited = true
 	}
 	if workingEngine == nil {

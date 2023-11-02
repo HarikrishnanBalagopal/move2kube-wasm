@@ -18,8 +18,11 @@ package cmd
 
 import (
 	"encoding/json"
+	"github.com/konveyor/move2kube-wasm/qaengine"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/konveyor/move2kube-wasm/common"
@@ -79,48 +82,47 @@ Exiting.`, outpath, overwriteFlag, outputFlag)
 	logrus.Infof("Output directory '%s' exists. The contents might get overwritten.", outpath)
 }
 
-// TODO: WASI
 func startQA(flags qaflags) {
-	//qaengine.StartEngine(flags.qaskip, flags.qaport, flags.qadisablecli)
-	//if flags.configOut == "" {
-	//	qaengine.SetupConfigFile("", flags.setconfigs, flags.configs, flags.preSets, flags.persistPasswords)
-	//} else {
-	//	if flags.configOut == "." {
-	//		qaengine.SetupConfigFile(common.ConfigFile, flags.setconfigs, flags.configs, flags.preSets, flags.persistPasswords)
-	//	} else if fi, err := os.Stat(flags.configOut); err == nil {
-	//		if fi.IsDir() {
-	//			qaengine.SetupConfigFile(filepath.Join(flags.configOut, common.ConfigFile), flags.setconfigs, flags.configs, flags.preSets, flags.persistPasswords)
-	//		} else {
-	//			qaengine.SetupConfigFile(flags.configOut, flags.setconfigs, flags.configs, flags.preSets, flags.persistPasswords)
-	//		}
-	//	} else if strings.Contains(filepath.Base(flags.configOut), ".") {
-	//		os.MkdirAll(filepath.Dir(flags.configOut), common.DefaultDirectoryPermission)
-	//		qaengine.SetupConfigFile(flags.configOut, flags.setconfigs, flags.configs, flags.preSets, flags.persistPasswords)
-	//	} else {
-	//		os.MkdirAll(flags.configOut, common.DefaultDirectoryPermission)
-	//		qaengine.SetupConfigFile(filepath.Join(flags.configOut, common.ConfigFile), flags.setconfigs, flags.configs, flags.preSets, flags.persistPasswords)
-	//	}
-	//}
-	//if flags.qaCacheOut != "" {
-	//	if flags.qaCacheOut == "." {
-	//		qaengine.SetupWriteCacheFile(common.QACacheFile, flags.persistPasswords)
-	//	} else if fi, err := os.Stat(flags.qaCacheOut); err == nil {
-	//		if fi.IsDir() {
-	//			qaengine.SetupWriteCacheFile(filepath.Join(flags.qaCacheOut, common.QACacheFile), flags.persistPasswords)
-	//		} else {
-	//			qaengine.SetupWriteCacheFile(flags.qaCacheOut, flags.persistPasswords)
-	//		}
-	//	} else if strings.Contains(filepath.Base(flags.qaCacheOut), ".") {
-	//		os.MkdirAll(filepath.Dir(flags.qaCacheOut), common.DefaultDirectoryPermission)
-	//		qaengine.SetupWriteCacheFile(flags.qaCacheOut, flags.persistPasswords)
-	//	} else {
-	//		os.MkdirAll(flags.qaCacheOut, common.DefaultDirectoryPermission)
-	//		qaengine.SetupWriteCacheFile(filepath.Join(flags.qaCacheOut, common.QACacheFile), flags.persistPasswords)
-	//	}
-	//}
-	//if err := qaengine.WriteStoresToDisk(); err != nil {
-	//	logrus.Warnf("Failed to write the stores to disk. Error: %q", err)
-	//}
+	qaengine.StartEngine(flags.qaskip, flags.qaport, flags.qadisablecli)
+	if flags.configOut == "" {
+		qaengine.SetupConfigFile("", flags.setconfigs, flags.configs, flags.preSets, flags.persistPasswords)
+	} else {
+		if flags.configOut == "." {
+			qaengine.SetupConfigFile(common.ConfigFile, flags.setconfigs, flags.configs, flags.preSets, flags.persistPasswords)
+		} else if fi, err := os.Stat(flags.configOut); err == nil {
+			if fi.IsDir() {
+				qaengine.SetupConfigFile(filepath.Join(flags.configOut, common.ConfigFile), flags.setconfigs, flags.configs, flags.preSets, flags.persistPasswords)
+			} else {
+				qaengine.SetupConfigFile(flags.configOut, flags.setconfigs, flags.configs, flags.preSets, flags.persistPasswords)
+			}
+		} else if strings.Contains(filepath.Base(flags.configOut), ".") {
+			os.MkdirAll(filepath.Dir(flags.configOut), common.DefaultDirectoryPermission)
+			qaengine.SetupConfigFile(flags.configOut, flags.setconfigs, flags.configs, flags.preSets, flags.persistPasswords)
+		} else {
+			os.MkdirAll(flags.configOut, common.DefaultDirectoryPermission)
+			qaengine.SetupConfigFile(filepath.Join(flags.configOut, common.ConfigFile), flags.setconfigs, flags.configs, flags.preSets, flags.persistPasswords)
+		}
+	}
+	if flags.qaCacheOut != "" {
+		if flags.qaCacheOut == "." {
+			qaengine.SetupWriteCacheFile(common.QACacheFile, flags.persistPasswords)
+		} else if fi, err := os.Stat(flags.qaCacheOut); err == nil {
+			if fi.IsDir() {
+				qaengine.SetupWriteCacheFile(filepath.Join(flags.qaCacheOut, common.QACacheFile), flags.persistPasswords)
+			} else {
+				qaengine.SetupWriteCacheFile(flags.qaCacheOut, flags.persistPasswords)
+			}
+		} else if strings.Contains(filepath.Base(flags.qaCacheOut), ".") {
+			os.MkdirAll(filepath.Dir(flags.qaCacheOut), common.DefaultDirectoryPermission)
+			qaengine.SetupWriteCacheFile(flags.qaCacheOut, flags.persistPasswords)
+		} else {
+			os.MkdirAll(flags.qaCacheOut, common.DefaultDirectoryPermission)
+			qaengine.SetupWriteCacheFile(filepath.Join(flags.qaCacheOut, common.QACacheFile), flags.persistPasswords)
+		}
+	}
+	if err := qaengine.WriteStoresToDisk(); err != nil {
+		logrus.Warnf("Failed to write the stores to disk. Error: %q", err)
+	}
 }
 
 func startPlanProgressServer(port int) {

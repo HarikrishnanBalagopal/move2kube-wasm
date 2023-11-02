@@ -18,6 +18,7 @@ package dockerfilegenerator
 
 import (
 	"fmt"
+	"github.com/konveyor/move2kube-wasm/qaengine"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -26,7 +27,6 @@ import (
 	gopache "github.com/Akash-Nayak/GopacheConfig"
 	"github.com/konveyor/move2kube-wasm/common"
 	"github.com/konveyor/move2kube-wasm/environment"
-	//"github.com/konveyor/move2kube-wasm/qaengine"
 	//irtypes "github.com/konveyor/move2kube-wasm/types/ir"
 	//"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	transformertypes "github.com/konveyor/move2kube-wasm/types/transformer"
@@ -130,12 +130,10 @@ func detectConfFiles(dir string) ([]string, error) {
 func GetConfFileForService(confFiles []string, serviceName string) string {
 	noAnswer := "none of the above"
 	confFiles = append(confFiles, noAnswer)
-	//TODO: WASI
-	//quesKey := common.JoinQASubKeys(common.ConfigServicesKey, `"`+serviceName+`"`, common.ConfigApacheConfFileForServiceKeySegment)
-	//desc := fmt.Sprintf("Choose the apache config file to be used for the service %s", serviceName)
-	//hints := []string{fmt.Sprintf("Selected apache config file will be used for identifying the port to be exposed for the service %s", serviceName)}
-	//selectedConfFile := qaengine.FetchSelectAnswer(quesKey, desc, hints, confFiles[0], confFiles, nil)
-	var selectedConfFile string
+	quesKey := common.JoinQASubKeys(common.ConfigServicesKey, `"`+serviceName+`"`, common.ConfigApacheConfFileForServiceKeySegment)
+	desc := fmt.Sprintf("Choose the apache config file to be used for the service %s", serviceName)
+	hints := []string{fmt.Sprintf("Selected apache config file will be used for identifying the port to be exposed for the service %s", serviceName)}
+	selectedConfFile := qaengine.FetchSelectAnswer(quesKey, desc, hints, confFiles[0], confFiles, nil)
 	if selectedConfFile == noAnswer {
 		logrus.Debugf("No apache config file selected for the service %s", serviceName)
 		return ""

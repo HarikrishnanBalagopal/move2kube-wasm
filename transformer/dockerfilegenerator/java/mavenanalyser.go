@@ -18,15 +18,16 @@ package java
 
 import (
 	"fmt"
+	"github.com/konveyor/move2kube-wasm/qaengine"
+	"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
+	"github.com/spf13/cast"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/konveyor/move2kube-wasm/common"
 	"github.com/konveyor/move2kube-wasm/environment"
-	//"github.com/konveyor/move2kube-wasm/qaengine"
 	//irtypes "github.com/konveyor/move2kube-wasm/types/ir"
-	//"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	"github.com/konveyor/move2kube-wasm/types/source/maven"
 	transformertypes "github.com/konveyor/move2kube-wasm/types/transformer"
 	"github.com/konveyor/move2kube-wasm/types/transformer/artifacts"
@@ -275,11 +276,10 @@ func (t *MavenAnalyser) TransformArtifact(newArtifact transformertypes.Artifact,
 		selectedChildModuleNames = append(selectedChildModuleNames, childModule.Name)
 	}
 	if len(selectedChildModuleNames) > 1 {
-		//TODO: WASI
-		//quesKey := fmt.Sprintf(common.ConfigServicesChildModulesNamesKey, `"`+serviceConfig.ServiceName+`"`)
-		//desc := fmt.Sprintf("For the multi-module Maven project '%s', please select all the child modules that should be run as services in the cluster:", serviceConfig.ServiceName)
-		//hints := []string{"deselect child modules that should not be run (like libraries)"}
-		//selectedChildModuleNames = qaengine.FetchMultiSelectAnswer(quesKey, desc, hints, selectedChildModuleNames, selectedChildModuleNames, nil)
+		quesKey := fmt.Sprintf(common.ConfigServicesChildModulesNamesKey, `"`+serviceConfig.ServiceName+`"`)
+		desc := fmt.Sprintf("For the multi-module Maven project '%s', please select all the child modules that should be run as services in the cluster:", serviceConfig.ServiceName)
+		hints := []string{"deselect child modules that should not be run (like libraries)"}
+		selectedChildModuleNames = qaengine.FetchMultiSelectAnswer(quesKey, desc, hints, selectedChildModuleNames, selectedChildModuleNames, nil)
 		if len(selectedChildModuleNames) == 0 {
 			return pathMappings, createdArtifacts, fmt.Errorf("user deselected all the child modules of the maven multi-module project '%s'", serviceConfig.ServiceName)
 		}
@@ -324,16 +324,14 @@ func (t *MavenAnalyser) TransformArtifact(newArtifact transformertypes.Artifact,
 		}
 
 		// have the user select which spring boot profiles to use and find a suitable list of ports
-		//TODO: WASI
-		//desc := fmt.Sprintf("Select the spring boot profiles for the service '%s' :", childModule.Name)
-		//hints := []string{"select all the profiles that are applicable"}
+		desc := fmt.Sprintf("Select the spring boot profiles for the service '%s' :", childModule.Name)
+		hints := []string{"select all the profiles that are applicable"}
 		detectedPorts := []int32{}
 		envVarsMap := map[string]string{}
 		if childModuleInfo.SpringBoot != nil {
 			if childModuleInfo.SpringBoot.SpringBootProfiles != nil && len(*childModuleInfo.SpringBoot.SpringBootProfiles) != 0 {
-				//quesKey := fmt.Sprintf(common.ConfigServicesChildModulesSpringProfilesKey, `"`+serviceConfig.ServiceName+`"`, `"`+childModule.Name+`"`)
-				//selectedSpringProfiles := qaengine.FetchMultiSelectAnswer(quesKey, desc, hints, *childModuleInfo.SpringBoot.SpringBootProfiles, *childModuleInfo.SpringBoot.SpringBootProfiles, nil)
-				selectedSpringProfiles := []string{}
+				quesKey := fmt.Sprintf(common.ConfigServicesChildModulesSpringProfilesKey, `"`+serviceConfig.ServiceName+`"`, `"`+childModule.Name+`"`)
+				selectedSpringProfiles := qaengine.FetchMultiSelectAnswer(quesKey, desc, hints, *childModuleInfo.SpringBoot.SpringBootProfiles, *childModuleInfo.SpringBoot.SpringBootProfiles, nil)
 				for _, selectedSpringProfile := range selectedSpringProfiles {
 					detectedPorts = append(detectedPorts, childModuleInfo.SpringBoot.SpringBootProfilePorts[selectedSpringProfile]...)
 				}
@@ -345,14 +343,12 @@ func (t *MavenAnalyser) TransformArtifact(newArtifact transformertypes.Artifact,
 
 		// have the user select the port to use
 
-		//TODO: WASI
-		selectedPort := int32(9002)
-		//selectedPort := commonqa.GetPortForService(detectedPorts, common.JoinQASubKeys(`"`+serviceConfig.ServiceName+`"`, "childModules", `"`+childModule.Name+`"`))
-		//if childModuleInfo.SpringBoot != nil {
-		//	envVarsMap["SERVER_PORT"] = cast.ToString(selectedPort)
-		//} else {
-		//	envVarsMap["PORT"] = cast.ToString(selectedPort)
-		//}
+		selectedPort := commonqa.GetPortForService(detectedPorts, common.JoinQASubKeys(`"`+serviceConfig.ServiceName+`"`, "childModules", `"`+childModule.Name+`"`))
+		if childModuleInfo.SpringBoot != nil {
+			envVarsMap["SERVER_PORT"] = cast.ToString(selectedPort)
+		} else {
+			envVarsMap["PORT"] = cast.ToString(selectedPort)
+		}
 
 		// find the path to the artifact (jar/war/ear) which should get copied into the run stage
 
@@ -451,16 +447,14 @@ func (t *MavenAnalyser) TransformArtifact(newArtifact transformertypes.Artifact,
 
 	// ask the user which maven profiles should be used while building the app
 
-	//TODO: WASI
-	//selectedMavenProfiles := qaengine.FetchMultiSelectAnswer(
-	//	common.JoinQASubKeys(common.ConfigServicesKey, `"`+serviceConfig.ServiceName+`"`, "mavenProfiles"),
-	//	fmt.Sprintf("Select the maven profiles to use for the '%s' service", serviceConfig.ServiceName),
-	//	[]string{"The selected maven profiles will be used during the build."},
-	//	rootPomInfo.MavenProfiles,
-	//	rootPomInfo.MavenProfiles,
-	//	nil,
-	//)
-	selectedMavenProfiles := []string{}
+	selectedMavenProfiles := qaengine.FetchMultiSelectAnswer(
+		common.JoinQASubKeys(common.ConfigServicesKey, `"`+serviceConfig.ServiceName+`"`, "mavenProfiles"),
+		fmt.Sprintf("Select the maven profiles to use for the '%s' service", serviceConfig.ServiceName),
+		[]string{"The selected maven profiles will be used during the build."},
+		rootPomInfo.MavenProfiles,
+		rootPomInfo.MavenProfiles,
+		nil,
+	)
 
 	// fill in the Dockerfile template for the build stage and write it out using a pathmapping
 

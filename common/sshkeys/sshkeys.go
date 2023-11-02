@@ -22,12 +22,13 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/konveyor/move2kube-wasm/common"
+	"github.com/konveyor/move2kube-wasm/qaengine"
 	"os"
 	"os/user"
 	"path/filepath"
 
 	commonknownhosts "github.com/konveyor/move2kube-wasm/common/knownhosts"
-	//"github.com/konveyor/move2kube-wasm/qaengine"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
@@ -66,16 +67,15 @@ func LoadKnownHostsOfCurrentUser() {
 	logrus.Debugf("Looking in the known_hosts at path %q for public keys.", knownHostsPath)
 
 	// Ask if we should look at ~/.ssh/known_hosts
-	//TODO: WASI
-	//	message := `The CI/CD pipeline needs access to the git repos in order to clone, build and push.
-	//Move2Kube has public keys for github.com, gitlab.com, and bitbucket.org by default.
-	//If any of the repos use ssh authentication we will need public keys in order to verify.
-	//Do you want to load the public keys from your [%s]?:`
-	//	ans := qaengine.FetchBoolAnswer(common.ConfigRepoLoadPubKey, fmt.Sprintf(message, knownHostsPath), []string{"No, I will add them later if necessary."}, false, nil)
-	//	if !ans {
-	//		logrus.Debug("Don't read public keys from known_hosts. They will be added later if necessary.")
-	//		return
-	//	}
+	message := `The CI/CD pipeline needs access to the git repos in order to clone, build and push.
+	Move2Kube has public keys for github.com, gitlab.com, and bitbucket.org by default.
+	If any of the repos use ssh authentication we will need public keys in order to verify.
+	Do you want to load the public keys from your [%s]?:`
+	ans := qaengine.FetchBoolAnswer(common.ConfigRepoLoadPubKey, fmt.Sprintf(message, knownHostsPath), []string{"No, I will add them later if necessary."}, false, nil)
+	if !ans {
+		logrus.Debug("Don't read public keys from known_hosts. They will be added later if necessary.")
+		return
+	}
 
 	newKeys, err := commonknownhosts.ParseKnownHosts(knownHostsPath)
 	if err != nil {
@@ -106,31 +106,30 @@ func loadSSHKeysOfCurrentUser() {
 	logrus.Debugf("Looking in ssh directory at path %q for keys.", privateKeyDir)
 
 	// Ask whether to load private keys or provide own key
-	//TODO: WASI
-	//	options := []string{
-	//		fmt.Sprintf("Load the private SSH keys from the directory '%s'" + privateKeyDir),
-	//		"Provide your own key",
-	//		"No, I will add them later if necessary.",
-	//	}
-	//	message := `The CI/CD pipeline needs access to the git repos in order to clone, build and push.
-	//If any of the repos require ssh keys you will need to provide them.
-	//Select an option:`
-	//	selectedOption := qaengine.FetchSelectAnswer(common.ConfigRepoLoadPrivKey, message, nil, "", options, nil)
-	//	switch selectedOption {
-	//	case options[0]:
-	//		selectedKeyFilenames, err := loadKeysFromDirectory(privateKeyDir)
-	//		if err != nil {
-	//			logrus.Warnf("Failed to load the keys from the SSH directory '%s'. Error: %q", privateKeyDir, err)
-	//			return
-	//		}
-	//		// Save the filenames for now. We will decrypt them if and when we need them.
-	//		privateKeysToConsider = selectedKeyFilenames
-	//	case options[1]:
-	//		privateKeysToConsider = []string{shoudlAskUserForSSHKey}
-	//	default:
-	//		logrus.Debug("Don't read private keys. They will be added later if necessary.")
-	//		return
-	//	}
+	options := []string{
+		fmt.Sprintf("Load the private SSH keys from the directory '%s'" + privateKeyDir),
+		"Provide your own key",
+		"No, I will add them later if necessary.",
+	}
+	message := `The CI/CD pipeline needs access to the git repos in order to clone, build and push.
+	If any of the repos require ssh keys you will need to provide them.
+	Select an option:`
+	selectedOption := qaengine.FetchSelectAnswer(common.ConfigRepoLoadPrivKey, message, nil, "", options, nil)
+	switch selectedOption {
+	case options[0]:
+		selectedKeyFilenames, err := loadKeysFromDirectory(privateKeyDir)
+		if err != nil {
+			logrus.Warnf("Failed to load the keys from the SSH directory '%s'. Error: %q", privateKeyDir, err)
+			return
+		}
+		// Save the filenames for now. We will decrypt them if and when we need them.
+		privateKeysToConsider = selectedKeyFilenames
+	case options[1]:
+		privateKeysToConsider = []string{shoudlAskUserForSSHKey}
+	default:
+		logrus.Debug("Don't read private keys. They will be added later if necessary.")
+		return
+	}
 }
 
 func loadKeysFromDirectory(directory string) ([]string, error) {
@@ -145,21 +144,19 @@ func loadKeysFromDirectory(directory string) ([]string, error) {
 	for _, finfo := range finfos {
 		filenames = append(filenames, finfo.Name())
 	}
-	//TODO: WASI
-	//selectedFilenames := qaengine.FetchMultiSelectAnswer(
-	//	common.ConfigRepoKeyPathsKey,
-	//	fmt.Sprintf("These are the files we found in the SSH directory '%s'. Select the keys to consider:", directory),
-	//	[]string{"Select all the keys that give access to the git repos."},
-	//	filenames,
-	//	filenames,
-	//	nil,
-	//)
-	//if len(selectedFilenames) == 0 {
-	//	logrus.Info("All key files ignored.")
-	//	return nil, nil
-	//}
-	//return selectedFilenames, nil
-	return nil, nil
+	selectedFilenames := qaengine.FetchMultiSelectAnswer(
+		common.ConfigRepoKeyPathsKey,
+		fmt.Sprintf("These are the files we found in the SSH directory '%s'. Select the keys to consider:", directory),
+		[]string{"Select all the keys that give access to the git repos."},
+		filenames,
+		filenames,
+		nil,
+	)
+	if len(selectedFilenames) == 0 {
+		logrus.Info("All key files ignored.")
+		return nil, nil
+	}
+	return selectedFilenames, nil
 }
 
 func marshalRSAIntoPEM(key *rsa.PrivateKey) string {
@@ -189,15 +186,14 @@ func loadSSHPrivateKeyFromBytes(keyBytes []byte, keyName string) (string, error)
 		if _, ok := err.(*ssh.PassphraseMissingError); !ok {
 			return "", fmt.Errorf("failed to parse as a SSH private key. Error %w", err)
 		}
-		//TODO: WASI
-		//qaKey := common.JoinQASubKeys(common.ConfigRepoPrivKey, `"`+keyName+`"`, "password")
-		//desc := fmt.Sprintf("Enter the password to decrypt the SSH private key '%s' : ", keyName)
-		//hints := []string{"Password:"}
-		//password := qaengine.FetchPasswordAnswer(qaKey, desc, hints, nil)
-		//key, err = ssh.ParseRawPrivateKeyWithPassphrase(keyBytes, []byte(password))
-		//if err != nil {
-		//	return "", fmt.Errorf("failed to decrypt and parse the encrypted private SSH key '%s' . Error %w", keyName, err)
-		//}
+		qaKey := common.JoinQASubKeys(common.ConfigRepoPrivKey, `"`+keyName+`"`, "password")
+		desc := fmt.Sprintf("Enter the password to decrypt the SSH private key '%s' : ", keyName)
+		hints := []string{"Password:"}
+		password := qaengine.FetchPasswordAnswer(qaKey, desc, hints, nil)
+		key, err = ssh.ParseRawPrivateKeyWithPassphrase(keyBytes, []byte(password))
+		if err != nil {
+			return "", fmt.Errorf("failed to decrypt and parse the encrypted private SSH key '%s' . Error %w", keyName, err)
+		}
 	}
 	// *ecdsa.PrivateKey
 	switch actualKey := key.(type) {
@@ -227,51 +223,49 @@ func GetSSHKey(domain string) (string, bool) {
 	}
 
 	if len(privateKeysToConsider) == 1 && privateKeysToConsider[0] == shoudlAskUserForSSHKey {
-		//TODO: WASI
-		//qaKey := common.JoinQASubKeys(common.ConfigRepoKeysKey, `"`+domain+`"`, "keyData")
-		//validatedKey := ""
-		//key := qaengine.FetchStringAnswer(
-		//	qaKey,
-		//	fmt.Sprintf("Provide a PEM-formatted SSH private key for the domain '%s':", domain),
-		//	[]string{"To skip this question, just leave the answer empty"},
-		//	"",
-		//	func(ansI interface{}) error {
-		//		ans := ansI.(string)
-		//		if ans == "" {
-		//			return nil
-		//		}
-		//		t1, err := loadSSHPrivateKeyFromBytes([]byte(ans), domain)
-		//		if err == nil {
-		//			validatedKey = t1
-		//		}
-		//		return err
-		//	},
-		//)
-		//if key == "" {
-		//	logrus.Debugf("No key was provided for the domain '%s'", domain)
-		//	return "", false
-		//}
-		//return validatedKey, true
+		qaKey := common.JoinQASubKeys(common.ConfigRepoKeysKey, `"`+domain+`"`, "keyData")
+		validatedKey := ""
+		key := qaengine.FetchStringAnswer(
+			qaKey,
+			fmt.Sprintf("Provide a PEM-formatted SSH private key for the domain '%s':", domain),
+			[]string{"To skip this question, just leave the answer empty"},
+			"",
+			func(ansI interface{}) error {
+				ans := ansI.(string)
+				if ans == "" {
+					return nil
+				}
+				t1, err := loadSSHPrivateKeyFromBytes([]byte(ans), domain)
+				if err == nil {
+					validatedKey = t1
+				}
+				return err
+			},
+		)
+		if key == "" {
+			logrus.Debugf("No key was provided for the domain '%s'", domain)
+			return "", false
+		}
+		return validatedKey, true
 	}
 
 	filenames := privateKeysToConsider
 	noAnswer := "none of the above"
 	filenames = append(filenames, noAnswer)
-	//qaKey := common.JoinQASubKeys(common.ConfigRepoKeysKey, `"`+domain+`"`, "key")
-	//desc := fmt.Sprintf("Select the key to use for the git domain '%s' :", domain)
-	//hints := []string{fmt.Sprintf("If none of the keys are correct, select '%s'", noAnswer)}
-	//filename := qaengine.FetchSelectAnswer(qaKey, desc, hints, noAnswer, filenames, nil)
-	//if filename == noAnswer {
-	//	logrus.Debugf("No key was selected for domain '%s'", domain)
-	//	return "", false
-	//}
+	qaKey := common.JoinQASubKeys(common.ConfigRepoKeysKey, `"`+domain+`"`, "key")
+	desc := fmt.Sprintf("Select the key to use for the git domain '%s' :", domain)
+	hints := []string{fmt.Sprintf("If none of the keys are correct, select '%s'", noAnswer)}
+	filename := qaengine.FetchSelectAnswer(qaKey, desc, hints, noAnswer, filenames, nil)
+	if filename == noAnswer {
+		logrus.Debugf("No key was selected for domain '%s'", domain)
+		return "", false
+	}
 
-	//logrus.Debug("Loading the key", filename)
-	//key, err := loadSSHPrivateKey(filename)
-	//if err != nil {
-	//	logrus.Warnf("Failed to load the SSH private key file '%s' . Error %q", filename, err)
-	//	return "", false
-	//}
-	//return key, true
-	return "", true
+	logrus.Debug("Loading the key", filename)
+	key, err := loadSSHPrivateKey(filename)
+	if err != nil {
+		logrus.Warnf("Failed to load the SSH private key file '%s' . Error %q", filename, err)
+		return "", false
+	}
+	return key, true
 }
