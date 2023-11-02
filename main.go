@@ -13,6 +13,9 @@ func main() {
 	logrus.Infof("start")
 	planCmd := cmd.GetPlanCommand()
 	transformCmd := cmd.GetTransformCommand()
+	transformCmd.SetArgs([]string{
+		"--qa-skip",
+	})
 	assetsFilePermissions := map[string]int{}
 	err := yaml.Unmarshal([]byte(assets.AssetFilePermissions), &assetsFilePermissions)
 	if err != nil {

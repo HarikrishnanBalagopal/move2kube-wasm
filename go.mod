@@ -16,6 +16,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-version v1.6.0
+	github.com/joho/godotenv v1.4.0
 	github.com/magiconair/properties v1.8.7
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mikefarah/yq/v4 v4.16.2
@@ -37,7 +38,6 @@ require (
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/kubernetes v1.23.1
 	knative.dev/serving v0.31.0
-	github.com/joho/godotenv v1.4.0
 
 )
 
