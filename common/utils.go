@@ -30,13 +30,16 @@ import (
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/konveyor/move2kube-wasm/types"
 	"github.com/mitchellh/mapstructure"
+	"github.com/spf13/cast"
 	"golang.org/x/text/transform"
 	"gopkg.in/yaml.v3"
 	"hash/crc64"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"math/rand"
 	"reflect"
 	"strconv"
 	"text/template"
@@ -1125,4 +1128,143 @@ func SplitYAML(rawYAML []byte) ([][]byte, error) {
 		}
 		docs = append(docs, doc)
 	}
+}
+
+// GetWindowsPath return Windows Path for any path
+func GetWindowsPath(path string) string {
+	return strings.ReplaceAll(path, `/`, `\`)
+}
+
+// GetImageNameAndTag splits an image full name and returns the image name and tag
+func GetImageNameAndTag(image string) (string, string) {
+	parts := strings.Split(image, "/")
+	imageAndTag := strings.Split(parts[len(parts)-1], ":")
+	imageName := imageAndTag[0]
+	var tag string
+	if len(imageAndTag) == 1 {
+		// no tag, assume latest
+		tag = "latest"
+	} else {
+		tag = imageAndTag[1]
+	}
+
+	return imageName, tag
+}
+
+// MakeStringDNSSubdomainNameCompliant makes the string a valid DNS subdomain name.
+// See https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
+// 1. contain no more than 253 characters
+// 2. contain only lowercase alphanumeric characters, '-' or '.'
+// 3. start with an alphanumeric character
+// 4. end with an alphanumeric character
+func MakeStringDNSSubdomainNameCompliant(s string) string {
+	name := s
+	if len(name) > 253 {
+		hash := GetSHA256Hash(name)
+		name = name[:253-65] // leave room for the hash (64 chars) plus hyphen (1 char).
+		name = name + "-" + hash
+	}
+	return MakeStringDNSNameCompliant(name)
+}
+
+// MarshalObjToYaml marshals an object to yaml
+func MarshalObjToYaml(obj runtime.Object) ([]byte, error) {
+	objJSONBytes, err := json.Marshal(obj)
+	if err != nil {
+		logrus.Errorf("Error while marshalling object %+v to json. Error: %q", obj, err)
+		return nil, err
+	}
+	var jsonObj interface{}
+	if err := yaml.Unmarshal(objJSONBytes, &jsonObj); err != nil {
+		logrus.Errorf("Unable to unmarshal the json as yaml:\n%s\nError: %q", objJSONBytes, err)
+		return nil, err
+	}
+	var b bytes.Buffer
+	encoder := yaml.NewEncoder(&b)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(jsonObj); err != nil {
+		logrus.Errorf("Error while encoding the json object:\n%s\nError: %q", jsonObj, err)
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
+// MakeStringDNSNameCompliant makes the string into a valid DNS name.
+func MakeStringDNSNameCompliant(s string) string {
+	name := strings.ToLower(s)
+	name = regexp.MustCompile(`[^a-z0-9-.]`).ReplaceAllLiteralString(name, "-")
+	start, end := name[0], name[len(name)-1]
+	if start == '-' || start == '.' || end == '-' || end == '.' {
+		logrus.Debugf("The first and/or last characters of the string %q are not alphanumeric.", s)
+	}
+	return name
+}
+
+// GetRandomString generates a random string
+func GetRandomString() string {
+	return cast.ToString(rand.Intn(10000000))
+}
+
+// ReadMove2KubeYamlStrict is like ReadMove2KubeYaml but returns an error
+// when it finds unknown fields in the yaml
+func ReadMove2KubeYamlStrict(path string, out interface{}, kind string) error {
+	yamlData, err := os.ReadFile(path)
+	if err != nil {
+		logrus.Debugf("Failed to read the yaml file at path %s Error: %q", path, err)
+		return err
+	}
+	yamlMap := map[string]interface{}{}
+	if err := yaml.Unmarshal([]byte(yamlData), yamlMap); err != nil {
+		logrus.Debugf("Error occurred while unmarshalling yaml file at path %s Error: %q", path, err)
+		return err
+	}
+	groupVersionI, ok := yamlMap["apiVersion"]
+	if !ok {
+		err := fmt.Errorf("did not find apiVersion in the yaml file at path %s", path)
+		logrus.Debug(err)
+		return err
+	}
+	groupVersionStr, ok := groupVersionI.(string)
+	if !ok {
+		err := fmt.Errorf("the apiVersion is not a string in the yaml file at path %s", path)
+		logrus.Debug(err)
+		return err
+	}
+	groupVersion, err := schema.ParseGroupVersion(groupVersionStr)
+	if err != nil {
+		return fmt.Errorf("failed to parse the apiVersion: '%s' . Error: %w", groupVersionStr, err)
+	}
+	if groupVersion.Group != types.SchemeGroupVersion.Group {
+		return fmt.Errorf(
+			"the yaml file at path '%s' doesn't have the correct group. Expected: '%s' Actual: '%s'",
+			path, types.SchemeGroupVersion.Group, groupVersion.Group,
+		)
+	}
+	if groupVersion.Version != types.SchemeGroupVersion.Version {
+		logrus.Warnf(
+			"The yaml file at path '%s' was generated using a different version of Move2Kube. File version is '%s' and current Move2Kube version is '%s'",
+			path, groupVersion.Version, types.SchemeGroupVersion.Version,
+		)
+	}
+	actualKindI, ok := yamlMap["kind"]
+	if !ok {
+		return fmt.Errorf("the kind is missing from the yaml file at path '%s'", path)
+	}
+	actualKind, ok := actualKindI.(string)
+	if !ok {
+		return fmt.Errorf("the kind is not a string in the yaml file at path '%s'", path)
+	}
+	if kind != "" && actualKind != kind {
+		return fmt.Errorf("the yaml file at path '%s' does not have the expected kind. Expected: '%s' Actual: '%s'", path, kind, actualKind)
+	}
+	jsonBytes, err := json.Marshal(yamlMap)
+	if err != nil {
+		return err
+	}
+	dec := json.NewDecoder(bytes.NewReader(jsonBytes))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(out); err != nil {
+		return fmt.Errorf("failed to decode the string '%s' as json. Error: %w", string(jsonBytes), err)
+	}
+	return nil
 }
