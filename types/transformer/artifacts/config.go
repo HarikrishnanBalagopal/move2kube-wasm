@@ -17,6 +17,7 @@
 package artifacts
 
 import (
+	"github.com/konveyor/move2kube-wasm/types/ir"
 	"reflect"
 
 	"github.com/konveyor/move2kube-wasm/common"
@@ -31,8 +32,7 @@ var (
 
 func init() {
 	configObjs := []transformertypes.Config{
-		//TODO: WASI
-		//new(ir.IR),
+		new(ir.IR),
 		new(NewImages),
 		new(MavenConfig),
 		new(GradleConfig),

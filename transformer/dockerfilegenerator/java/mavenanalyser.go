@@ -19,6 +19,7 @@ package java
 import (
 	"fmt"
 	"github.com/konveyor/move2kube-wasm/qaengine"
+	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
 	"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	"github.com/spf13/cast"
 	"os"
@@ -390,12 +391,11 @@ func (t *MavenAnalyser) TransformArtifact(newArtifact transformertypes.Artifact,
 
 		// preserve the ir config and inject cloud foundry vcap properties if it is present
 
-		//TODO: WASI
-		//ir := irtypes.IR{}
-		//if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err == nil {
-		//	ir = injectProperties(ir, childModuleInfo.Name)
-		//	runStageArtifact.Configs[irtypes.IRConfigType] = ir
-		//}
+		ir := irtypes.IR{}
+		if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err == nil {
+			ir = injectProperties(ir, childModuleInfo.Name)
+			runStageArtifact.Configs[irtypes.IRConfigType] = ir
+		}
 
 		createdArtifacts = append(createdArtifacts, runStageArtifact)
 	}

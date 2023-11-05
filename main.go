@@ -11,7 +11,11 @@ import (
 
 func main() {
 	logrus.Infof("start")
-	rootCmd := cmd.GetPlanCommand()
+	planCmd := cmd.GetPlanCommand()
+	transformCmd := cmd.GetTransformCommand()
+	transformCmd.SetArgs([]string{
+		"--qa-skip",
+	})
 	assetsFilePermissions := map[string]int{}
 	err := yaml.Unmarshal([]byte(assets.AssetFilePermissions), &assetsFilePermissions)
 	if err != nil {
@@ -26,7 +30,10 @@ func main() {
 	common.RemoteTempPath = remoteTempPath
 	defer os.RemoveAll(tempPath)
 	defer os.RemoveAll(remoteTempPath)
-	if err := rootCmd.Execute(); err != nil {
+	if err := planCmd.Execute(); err != nil {
+		logrus.Fatalf("Error: %q", err)
+	}
+	if err := transformCmd.Execute(); err != nil {
 		logrus.Fatalf("Error: %q", err)
 	}
 	logrus.Infof("end")

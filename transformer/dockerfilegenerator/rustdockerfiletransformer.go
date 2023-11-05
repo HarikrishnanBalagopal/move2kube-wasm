@@ -18,6 +18,8 @@ package dockerfilegenerator
 
 import (
 	"fmt"
+	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
+	"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	"os"
 	"path/filepath"
 
@@ -132,17 +134,15 @@ func (t *RustDockerfileGenerator) Transform(newArtifacts []transformertypes.Arti
 		if err != nil {
 			logrus.Debugf("Unable to load config for Transformer into %T : %s", sImageName, err)
 		}
-		//TODO: WASI
 
-		//ir := irtypes.IR{}
-		//irPresent := true
-		//err = a.GetConfig(irtypes.IRConfigType, &ir)
-		//if err != nil {
-		//	irPresent = false
-		//	logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
-		//}
-		//ports := ir.GetAllServicePorts()
-		ports := []int32{}
+		ir := irtypes.IR{}
+		irPresent := true
+		err = a.GetConfig(irtypes.IRConfigType, &ir)
+		if err != nil {
+			irPresent = false
+			logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
+		}
+		ports := ir.GetAllServicePorts()
 		var rustConfig RustTemplateConfig
 		rustConfig.AppName = a.Name
 		rocketTomlFilePath := filepath.Join(a.Paths[artifacts.ServiceDirPathType][0], rocketTomlFile)
@@ -157,7 +157,7 @@ func (t *RustDockerfileGenerator) Transform(newArtifacts []transformertypes.Arti
 		if len(ports) == 0 {
 			ports = append(ports, common.DefaultServicePort)
 		}
-		//rustConfig.Port = commonqa.GetPortForService(ports, `"`+a.Name+`"`)
+		rustConfig.Port = commonqa.GetPortForService(ports, `"`+a.Name+`"`)
 		if sImageName.ImageName == "" {
 			sImageName.ImageName = common.MakeStringContainerImageNameCompliant(sConfig.ServiceName)
 		}
@@ -189,11 +189,10 @@ func (t *RustDockerfileGenerator) Transform(newArtifacts []transformertypes.Arti
 				artifacts.ServiceConfigType:   sConfig,
 			},
 		}
-		//TODO: WASI
 
-		//if irPresent {
-		//	dfs.Configs[irtypes.IRConfigType] = ir
-		//}
+		if irPresent {
+			dfs.Configs[irtypes.IRConfigType] = ir
+		}
 		artifactsCreated = append(artifactsCreated, p, dfs)
 	}
 	return pathMappings, artifactsCreated, nil

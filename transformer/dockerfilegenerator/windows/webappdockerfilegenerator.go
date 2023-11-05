@@ -19,6 +19,8 @@ package windows
 import (
 	"fmt"
 	"github.com/konveyor/move2kube-wasm/qaengine"
+	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
+	"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	"path/filepath"
 
 	"github.com/konveyor/move2kube-wasm/common"
@@ -276,18 +278,17 @@ func (t *WinWebAppDockerfileGenerator) Transform(newArtifacts []transformertypes
 			logrus.Errorf("failed to make the service directory path %s relative to the source directory %s . Error: %q", serviceDir, t.Env.GetEnvironmentSource(), err)
 			continue
 		}
-		//TODO: WASI
-		//ir := irtypes.IR{}
-		//irPresent := true
-		//if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err != nil {
-		//	irPresent = false
-		//	logrus.Debugf("failed to load the IR config from the dot net artifact. Error: %q Artifact: %+v", err, newArtifact)
-		//}
-		//
-		//detectedPorts := ir.GetAllServicePorts()
-		//if len(detectedPorts) == 0 {
-		//	detectedPorts = append(detectedPorts, common.DefaultServicePort)
-		//}
+		ir := irtypes.IR{}
+		irPresent := true
+		if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err != nil {
+			irPresent = false
+			logrus.Debugf("failed to load the IR config from the dot net artifact. Error: %q Artifact: %+v", err, newArtifact)
+		}
+
+		detectedPorts := ir.GetAllServicePorts()
+		if len(detectedPorts) == 0 {
+			detectedPorts = append(detectedPorts, common.DefaultServicePort)
+		}
 
 		// copy over the source dir to hold the dockerfiles we genrate
 
@@ -324,9 +325,7 @@ func (t *WinWebAppDockerfileGenerator) Transform(newArtifacts []transformertypes
 			}
 
 			// have the user select the ports to use for the child project
-			//TODO: WASI
-			//selectedPorts := commonqa.GetPortsForService(detectedPorts, common.JoinQASubKeys(`"`+newArtifact.Name+`"`, "childProjects", `"`+childProject.Name+`"`))
-			selectedPorts := []int32{}
+			selectedPorts := commonqa.GetPortsForService(detectedPorts, common.JoinQASubKeys(`"`+newArtifact.Name+`"`, "childProjects", `"`+childProject.Name+`"`))
 			// data to fill the Dockerfile template
 
 			relCSProjDir := filepath.Dir(childProject.RelCSProjPath)
@@ -395,10 +394,9 @@ func (t *WinWebAppDockerfileGenerator) Transform(newArtifacts []transformertypes
 					artifacts.ImageNameConfigType: imageName,
 				},
 			}
-			//TODO: WASI
-			//if irPresent {
-			//	dockerfileServiceArtifact.Configs[irtypes.IRConfigType] = ir
-			//}
+			if irPresent {
+				dockerfileServiceArtifact.Configs[irtypes.IRConfigType] = ir
+			}
 			currArtifactsCreated = append(currArtifactsCreated, dockerfileArtifact, dockerfileServiceArtifact)
 		}
 

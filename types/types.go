@@ -22,7 +22,7 @@ import (
 
 const (
 	// AppName represents the full app name
-	AppName string = "move2kube"
+	AppName string = "move2kube-wasm"
 	// AppNameShort represents the short app name
 	AppNameShort string = "m2k"
 	// GroupName is the group name use in this package

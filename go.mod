@@ -16,6 +16,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-version v1.6.0
+	github.com/joho/godotenv v1.4.0
 	github.com/magiconair/properties v1.8.7
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mikefarah/yq/v4 v4.16.2
@@ -37,6 +38,7 @@ require (
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/kubernetes v1.23.1
 	knative.dev/serving v0.31.0
+
 )
 
 require (
@@ -48,6 +50,8 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/distribution v2.8.0+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
+	github.com/docker/go-connections v0.4.0 // indirect
+	github.com/docker/go-units v0.4.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/elliotchance/orderedmap v1.4.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
@@ -80,6 +84,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
+	github.com/opencontainers/image-spec v1.0.3-0.20220114050600-8b9d41f48198 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/pierrec/lz4/v4 v4.1.2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect

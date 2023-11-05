@@ -19,6 +19,8 @@ package dockerfilegenerator
 import (
 	"fmt"
 	"github.com/konveyor/move2kube-wasm/qaengine"
+	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
+	"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -188,16 +190,15 @@ func (t *PHPDockerfileGenerator) Transform(newArtifacts []transformertypes.Artif
 		if err != nil {
 			logrus.Debugf("unable to load config for Transformer into %T : %s", sImageName, err)
 		}
-		//TODO: WASI
 
-		//ir := irtypes.IR{}
-		//irPresent := true
-		//err = a.GetConfig(irtypes.IRConfigType, &ir)
-		//if err != nil {
-		//	irPresent = false
-		//	logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
-		//}
-		//detectedPorts := ir.GetAllServicePorts()
+		ir := irtypes.IR{}
+		irPresent := true
+		err = a.GetConfig(irtypes.IRConfigType, &ir)
+		if err != nil {
+			irPresent = false
+			logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
+		}
+		detectedPorts := ir.GetAllServicePorts()
 		var phpConfig PhpTemplateConfig
 		confFiles, err := detectConfFiles(a.Paths[artifacts.ServiceDirPathType][0])
 		if err != nil {
@@ -215,9 +216,7 @@ func (t *PHPDockerfileGenerator) Transform(newArtifacts []transformertypes.Artif
 				}
 			}
 			if phpConfig.ConfFilePort == 0 {
-				//TODO: WASI
-
-				//phpConfig.ConfFilePort = commonqa.GetPortForService(detectedPorts, `"`+a.Name+`"`)
+				phpConfig.ConfFilePort = commonqa.GetPortForService(detectedPorts, `"`+a.Name+`"`)
 			}
 		}
 		if sImageName.ImageName == "" {
@@ -251,11 +250,10 @@ func (t *PHPDockerfileGenerator) Transform(newArtifacts []transformertypes.Artif
 				artifacts.ServiceConfigType:   sConfig,
 			},
 		}
-		//TODO: WASI
 
-		//if irPresent {
-		//	dfs.Configs[irtypes.IRConfigType] = ir
-		//}
+		if irPresent {
+			dfs.Configs[irtypes.IRConfigType] = ir
+		}
 		artifactsCreated = append(artifactsCreated, p, dfs)
 	}
 	return pathMappings, artifactsCreated, nil

@@ -18,6 +18,7 @@ package java
 
 import (
 	"fmt"
+	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
 	"os"
 	"path/filepath"
 
@@ -185,11 +186,10 @@ func (t *Jboss) Transform(newArtifacts []transformertypes.Artifact, alreadySeenA
 				artifacts.ServiceConfigType:   serviceConfig,
 			},
 		}
-		//TODO: WASI
-		//ir := irtypes.IR{}
-		//if err = newArtifact.GetConfig(irtypes.IRConfigType, &ir); err == nil {
-		//	dockerfileServiceArtifact.Configs[irtypes.IRConfigType] = ir
-		//}
+		ir := irtypes.IR{}
+		if err = newArtifact.GetConfig(irtypes.IRConfigType, &ir); err == nil {
+			dockerfileServiceArtifact.Configs[irtypes.IRConfigType] = ir
+		}
 		createdArtifacts = append(createdArtifacts, dockerfileArtifact, dockerfileServiceArtifact)
 	}
 	return pathMappings, createdArtifacts, nil

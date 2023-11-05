@@ -198,9 +198,9 @@ func transformHandler(cmd *cobra.Command, flags transformFlags) {
 		}
 
 		// Global settings
-		if transformationPlan.Spec.SourceDir != "" {
-			checkSourcePath(transformationPlan.Spec.SourceDir)
-		}
+		//if transformationPlan.Spec.SourceDir != "" {
+		//	checkSourcePath(transformationPlan.Spec.SourceDir)
+		//}
 		lib.CheckAndCopyCustomizations(transformationPlan.Spec.CustomizationsDir)
 
 		//TODO: WASI

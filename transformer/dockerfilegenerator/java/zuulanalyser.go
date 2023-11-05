@@ -17,6 +17,7 @@
 package java
 
 import (
+	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
 	"strings"
 
 	"github.com/konveyor/move2kube-wasm/common"
@@ -83,28 +84,26 @@ func (t *ZuulAnalyser) DirectoryDetect(dir string) (services map[string][]transf
 
 // Transform transforms the artifacts
 func (t *ZuulAnalyser) Transform(newArtifacts []transformertypes.Artifact, alreadySeenArtifacts []transformertypes.Artifact) ([]transformertypes.PathMapping, []transformertypes.Artifact, error) {
-	//TODO: WASI
-	//artifactsCreated := []transformertypes.Artifact{}
-	//for _, a := range newArtifacts {
-	//	ir := irtypes.IR{}
-	//	if err := a.GetConfig(irtypes.IRConfigType, &ir); err != nil {
-	//		logrus.Errorf("unable to load config for Transformer into %T Error: %q", ir, err)
-	//		continue
-	//	}
-	//	for sn, s := range ir.Services {
-	//		if r, ok := t.services[sn]; ok {
-	//			if len(s.ServiceToPodPortForwardings) > 0 {
-	//				s.ServiceToPodPortForwardings[0].ServiceRelPath = r
-	//			}
-	//			if s.Annotations == nil {
-	//				s.Annotations = map[string]string{}
-	//			}
-	//		}
-	//		ir.Services[sn] = s
-	//	}
-	//	a.Configs[irtypes.IRConfigType] = ir
-	//	artifactsCreated = append(artifactsCreated, a)
-	//}
-	//return nil, artifactsCreated, nil
-	return nil, nil, nil
+	artifactsCreated := []transformertypes.Artifact{}
+	for _, a := range newArtifacts {
+		ir := irtypes.IR{}
+		if err := a.GetConfig(irtypes.IRConfigType, &ir); err != nil {
+			logrus.Errorf("unable to load config for Transformer into %T Error: %q", ir, err)
+			continue
+		}
+		for sn, s := range ir.Services {
+			if r, ok := t.services[sn]; ok {
+				if len(s.ServiceToPodPortForwardings) > 0 {
+					s.ServiceToPodPortForwardings[0].ServiceRelPath = r
+				}
+				if s.Annotations == nil {
+					s.Annotations = map[string]string{}
+				}
+			}
+			ir.Services[sn] = s
+		}
+		a.Configs[irtypes.IRConfigType] = ir
+		artifactsCreated = append(artifactsCreated, a)
+	}
+	return nil, artifactsCreated, nil
 }

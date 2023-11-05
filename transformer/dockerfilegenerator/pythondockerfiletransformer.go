@@ -20,6 +20,8 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/konveyor/move2kube-wasm/qaengine"
+	irtypes "github.com/konveyor/move2kube-wasm/types/ir"
+	"github.com/konveyor/move2kube-wasm/types/qaengine/commonqa"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -215,14 +217,13 @@ func (t *PythonDockerfileGenerator) Transform(newArtifacts []transformertypes.Ar
 		if imageName.ImageName == "" {
 			imageName.ImageName = common.MakeStringContainerImageNameCompliant(serviceConfig.ServiceName)
 		}
-		//TODO: WASI
 
-		//ir := irtypes.IR{}
-		//irPresent := true
-		//if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err != nil {
-		//	irPresent = false
-		//	logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
-		//}
+		ir := irtypes.IR{}
+		irPresent := true
+		if err := newArtifact.GetConfig(irtypes.IRConfigType, &ir); err != nil {
+			irPresent = false
+			logrus.Debugf("unable to load config for Transformer into %T : %s", ir, err)
+		}
 		var pythonTemplateConfig PythonTemplateConfig
 		if len(newArtifact.Paths[MainPythonFilesPathType]) > 0 {
 			pythonTemplateConfig.StartingScriptRelPath = getMainPythonFileForService(newArtifact.Paths[MainPythonFilesPathType], serviceDir, newArtifact.Name)
@@ -236,13 +237,12 @@ func (t *PythonDockerfileGenerator) Transform(newArtifacts []transformertypes.Ar
 			logrus.Debugf("unable to load config for Transformer into %T : %s", imageName, err)
 		}
 		pythonTemplateConfig.IsDjango = pythonConfig.IsDjango
-		//TODO: WASI
 
-		//ports := ir.GetAllServicePorts()
-		//if len(ports) == 0 {
-		//	ports = []int32{common.DefaultServicePort}
-		//}
-		//pythonTemplateConfig.Port = commonqa.GetPortForService(ports, `"`+newArtifact.Name+`"`)
+		ports := ir.GetAllServicePorts()
+		if len(ports) == 0 {
+			ports = []int32{common.DefaultServicePort}
+		}
+		pythonTemplateConfig.Port = commonqa.GetPortForService(ports, `"`+newArtifact.Name+`"`)
 		if len(newArtifact.Paths[artifacts.ServiceDirPathType]) == 0 {
 			logrus.Errorf("The service directory path is missing for the artifact: %+v", newArtifact)
 			continue
@@ -281,11 +281,10 @@ func (t *PythonDockerfileGenerator) Transform(newArtifacts []transformertypes.Ar
 				artifacts.ImageNameConfigType: imageName,
 			},
 		}
-		//TODO: WASI
 
-		//if irPresent {
-		//	dfs.Configs[irtypes.IRConfigType] = ir
-		//}
+		if irPresent {
+			dfs.Configs[irtypes.IRConfigType] = ir
+		}
 		artifactsCreated = append(artifactsCreated, p, dfs)
 	}
 	return pathMappings, artifactsCreated, nil
