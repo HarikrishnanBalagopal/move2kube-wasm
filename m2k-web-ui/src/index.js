@@ -17,6 +17,18 @@ const sock_accept = (sock, fd_flags, ro_fd, ro_addr) => {
     return 0;
 };
 
+var FILE_SYSTEM;
+
+function downloadArrayBufferAsBlob(arrayBuffer) {
+    const bs = new Blob([arrayBuffer]);
+    const ys=URL.createObjectURL(bs);
+    const aelem = document.createElement('a');
+    aelem.setAttribute('href', ys);
+    aelem.download = 'myproject.zip';
+    document.body.appendChild(aelem);
+    aelem.click();
+}
+
 const start_wasm = async (rootE, filename, fileContentsArr) => {
     // create terminal object and attach to the element
     const term = new Terminal({
@@ -75,6 +87,7 @@ const start_wasm = async (rootE, filename, fileContentsArr) => {
             [filename]: new File(fileContentsArr),
         }),
     ];
+    FILE_SYSTEM = fds
     const wasi = new WASI(args, env, fds);
 
     const importObject = {
@@ -108,6 +121,7 @@ const start_wasm = async (rootE, filename, fileContentsArr) => {
     const wasmModule = await WebAssembly.instantiateStreaming(fetch(wasmUrl), importObject);
     console.log(wasmModule);
     console.log(wasmModule.instance.exports);
+    console.log(wasmModule.instance.exports.memory.buffer);
     // console.log(m.instance.exports._start());
     try {
         wasi.start(wasmModule.instance);
@@ -154,8 +168,19 @@ const add_controls = (rootE) => {
             console.error(`failed to read the file '${f.name}' . error:`, e);
         }
     });
+    const label_download_output = document.createElement('label');
+    label_download_output.textContent = 'click on the button to download "myproject" folder';
+    const btn_download = document.createElement('button');
+    btn_download.textContent = 'Download "myproject"';
+    btn_download.addEventListener("click", () => {
+        console.log(FILE_SYSTEM);
+        downloadArrayBufferAsBlob(FILE_SYSTEM[3].dir.contents["myproject.zip"].data.buffer);
+    })
     label_input_file.appendChild(input_file);
+    label_download_output.appendChild(btn_download);
     div_controls.appendChild(label_input_file);
+    div_controls.appendChild(document.createElement("br"));
+    div_controls.appendChild(label_download_output);
     document.body.appendChild(div_controls);
 };
 

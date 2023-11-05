@@ -28,6 +28,7 @@ import (
 	//"github.com/konveyor/move2kube-wasm/common/vcs"
 	"github.com/konveyor/move2kube-wasm/lib"
 	"github.com/konveyor/move2kube-wasm/types/plan"
+	"github.com/mholt/archiver/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -220,6 +221,21 @@ func transformHandler(cmd *cobra.Command, flags transformFlags) {
 		logrus.Fatalf("failed to transform. Error: %q", err)
 	}
 	logrus.Infof("Transformed target artifacts can be found at [%s].", flags.outpath)
+	{
+		if err := archiver.Archive([]string{"myproject"}, "myproject.zip"); err != nil {
+			logrus.Fatalf("Cannot archive myproject dir. Error: %q", err)
+		}
+	}
+	{
+		logrus.Infof("DEBUG after planning, list files")
+		fs, err := os.ReadDir("myproject/source/language-platforms/")
+		if err != nil {
+			panic(err)
+		}
+		for i, f := range fs {
+			logrus.Infof("DEBUG file[%d] %+v", i, f)
+		}
+	}
 }
 
 // GetTransformCommand returns a command to do the transformation
