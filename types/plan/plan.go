@@ -45,7 +45,7 @@ func NewPlan() Plan {
 	plan := Plan{
 		TypeMeta: types.TypeMeta{
 			Kind:       string(PlanKind),
-			APIVersion: "move2kube-wasm.konveyor.io/v1alpha1", // TODO: CHANGE THIS types.SchemeGroupVersion.String(),
+			APIVersion: types.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: types.ObjectMeta{
 			Name: common.DefaultProjectName,

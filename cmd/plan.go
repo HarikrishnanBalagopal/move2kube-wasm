@@ -165,6 +165,9 @@ func planHandler(cmd *cobra.Command, flags planFlags) {
 					srcpath = archiveExpandedPath
 					logrus.Infof("using '%s' as the source directory", srcpath)
 					supported = true
+					if err := os.WriteFile(filepath.Join(archiveExpandedPath, ".m2kignore"), []byte("."), common.DefaultFilePermission); err != nil {
+						logrus.Fatalf("Could not write .m2kignore file. Error: %q", err)
+					}
 					break
 				}
 			}
